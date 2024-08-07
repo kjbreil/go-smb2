@@ -5,7 +5,7 @@ import (
 	"crypto/rc4"
 	"errors"
 
-	"github.com/hirochachacha/go-smb2/internal/utf16le"
+	"github.com/kjbreil/go-smb2/internal/utf16le"
 )
 
 type Session struct {
@@ -62,7 +62,7 @@ func (s *Session) Overhead() int {
 }
 
 func (s *Session) Sum(plaintext []byte, seqNum uint32) ([]byte, uint32) {
-	if s.negotiateFlags&NTLMSSP_NEGOTIATE_SIGN == 0 {
+	if s.negotiateFlags&NtlmsspNegotiateSign == 0 {
 		return nil, 0
 	}
 
@@ -73,7 +73,7 @@ func (s *Session) Sum(plaintext []byte, seqNum uint32) ([]byte, uint32) {
 }
 
 func (s *Session) CheckSum(sum, plaintext []byte, seqNum uint32) (bool, uint32) {
-	if s.negotiateFlags&NTLMSSP_NEGOTIATE_SIGN == 0 {
+	if s.negotiateFlags&NtlmsspNegotiateSign == 0 {
 		if sum == nil {
 			return true, 0
 		}
@@ -98,7 +98,7 @@ func (s *Session) Seal(dst, plaintext []byte, seqNum uint32) ([]byte, uint32) {
 	ret, ciphertext := sliceForAppend(dst, len(plaintext)+16)
 
 	switch {
-	case s.negotiateFlags&NTLMSSP_NEGOTIATE_SEAL != 0:
+	case s.negotiateFlags&NtlmsspNegotiateSeal != 0:
 		s.clientHandle.XORKeyStream(ciphertext[16:], plaintext)
 
 		if s.isClientSide {
@@ -106,7 +106,7 @@ func (s *Session) Seal(dst, plaintext []byte, seqNum uint32) ([]byte, uint32) {
 		} else {
 			_, seqNum = mac(ciphertext[:0], s.negotiateFlags, s.serverHandle, s.serverSigningKey, seqNum, plaintext)
 		}
-	case s.negotiateFlags&NTLMSSP_NEGOTIATE_SIGN != 0:
+	case s.negotiateFlags&NtlmsspNegotiateSign != 0:
 		copy(ciphertext[16:], plaintext)
 
 		if s.isClientSide {
@@ -123,7 +123,7 @@ func (s *Session) Unseal(dst, ciphertext []byte, seqNum uint32) ([]byte, uint32,
 	ret, plaintext := sliceForAppend(dst, len(ciphertext)-16)
 
 	switch {
-	case s.negotiateFlags&NTLMSSP_NEGOTIATE_SEAL != 0:
+	case s.negotiateFlags&NtlmsspNegotiateSeal != 0:
 		s.serverHandle.XORKeyStream(plaintext, ciphertext[16:])
 
 		var sum []byte
@@ -136,7 +136,7 @@ func (s *Session) Unseal(dst, ciphertext []byte, seqNum uint32) ([]byte, uint32,
 		if !bytes.Equal(ciphertext[:16], sum) {
 			return nil, 0, errors.New("signature mismatch")
 		}
-	case s.negotiateFlags&NTLMSSP_NEGOTIATE_SIGN != 0:
+	case s.negotiateFlags&NtlmsspNegotiateSign != 0:
 		copy(plaintext, ciphertext[16:])
 
 		var sum []byte

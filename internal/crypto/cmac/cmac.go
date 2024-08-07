@@ -51,7 +51,7 @@ type cmac struct {
 
 // TODO(rsc): Should this return an error instead of panic?
 
-// NewCMAC returns a new instance of a CMAC message authentication code
+// New returns a new instance of a CMAC message authentication code
 // digest using the given Cipher.
 func New(c cipher.Block) hash.Hash {
 	var r byte

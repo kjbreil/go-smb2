@@ -13,10 +13,10 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/hirochachacha/go-smb2/internal/erref"
-	. "github.com/hirochachacha/go-smb2/internal/smb2"
+	. "github.com/kjbreil/go-smb2/internal/erref"
+	. "github.com/kjbreil/go-smb2/internal/smb2"
 
-	"github.com/hirochachacha/go-smb2/internal/msrpc"
+	"github.com/kjbreil/go-smb2/internal/msrpc"
 )
 
 // Dialer contains options for func (*Dialer) Dial.
@@ -134,12 +134,12 @@ func (c *Session) ListSharenames() ([]string, error) {
 	callId := rand.Uint32()
 
 	bindReq := &IoctlRequest{
-		CtlCode:           FSCTL_PIPE_TRANSCEIVE,
+		CtlCode:           FsctlPipeTransceive,
 		OutputOffset:      0,
 		OutputCount:       0,
 		MaxInputResponse:  0,
 		MaxOutputResponse: 4280,
-		Flags:             SMB2_0_IOCTL_IS_FSCTL,
+		Flags:             Smb20IoctlIsFsctl,
 		Input: &msrpc.Bind{
 			CallId: callId,
 		},
@@ -158,13 +158,13 @@ func (c *Session) ListSharenames() ([]string, error) {
 	callId++
 
 	reqReq := &IoctlRequest{
-		CtlCode:          FSCTL_PIPE_TRANSCEIVE,
+		CtlCode:          FsctlPipeTransceive,
 		OutputOffset:     0,
 		OutputCount:      0,
 		MaxInputResponse: 0,
 		// MaxOutputResponse: 4280,
 		MaxOutputResponse: 1024,
-		Flags:             SMB2_0_IOCTL_IS_FSCTL,
+		Flags:             Smb20IoctlIsFsctl,
 		Input: &msrpc.NetShareEnumAllRequest{
 			CallId:     callId,
 			ServerName: servername,
@@ -174,7 +174,7 @@ func (c *Session) ListSharenames() ([]string, error) {
 
 	output, err = f.ioctl(reqReq)
 	if err != nil {
-		if rerr, ok := err.(*ResponseError); ok && NtStatus(rerr.Code) == STATUS_BUFFER_OVERFLOW {
+		if rerr, ok := err.(*ResponseError); ok && NtStatus(rerr.Code) == StatusBufferOverflow {
 			buf := make([]byte, 4280)
 
 			rlen := 4280 - len(output)
@@ -227,26 +227,26 @@ type Share struct {
 	ctx context.Context
 }
 
-func (fs *Share) WithContext(ctx context.Context) *Share {
+func (s *Share) WithContext(ctx context.Context) *Share {
 	if ctx == nil {
 		panic("nil context")
 	}
 	return &Share{
-		treeConn: fs.treeConn,
+		treeConn: s.treeConn,
 		ctx:      ctx,
 	}
 }
 
 // Umount disconects the current SMB tree.
-func (fs *Share) Umount() error {
-	return fs.treeConn.disconnect(fs.ctx)
+func (s *Share) Umount() error {
+	return s.treeConn.disconnect(s.ctx)
 }
 
-func (fs *Share) Create(name string) (*File, error) {
-	return fs.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+func (s *Share) Create(name string) (*File, error) {
+	return s.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 }
 
-func (fs *Share) newFile(r CreateResponseDecoder, name string) *File {
+func (s *Share) newFile(r CreateResponseDecoder, name string) *File {
 	fd := r.FileId().Decode()
 
 	fileStat := &FileStat{
@@ -260,18 +260,18 @@ func (fs *Share) newFile(r CreateResponseDecoder, name string) *File {
 		FileName:       base(name),
 	}
 
-	f := &File{fs: fs, fd: fd, name: name, fileStat: fileStat}
+	f := &File{fs: s, fd: fd, name: name, fileStat: fileStat}
 
 	runtime.SetFinalizer(f, (*File).close)
 
 	return f
 }
 
-func (fs *Share) Open(name string) (*File, error) {
-	return fs.OpenFile(name, os.O_RDONLY, 0)
+func (s *Share) Open(name string) (*File, error) {
+	return s.OpenFile(name, os.O_RDONLY, 0)
 }
 
-func (fs *Share) OpenFile(name string, flag int, perm os.FileMode) (*File, error) {
+func (s *Share) OpenFile(name string, flag int, perm os.FileMode) (*File, error) {
 	name = normPath(name)
 
 	if err := validatePath("open", name, false); err != nil {
@@ -281,54 +281,54 @@ func (fs *Share) OpenFile(name string, flag int, perm os.FileMode) (*File, error
 	var access uint32
 	switch flag & (os.O_RDONLY | os.O_WRONLY | os.O_RDWR) {
 	case os.O_RDONLY:
-		access = GENERIC_READ
+		access = GenericRead
 	case os.O_WRONLY:
-		access = GENERIC_WRITE
+		access = GenericWrite
 	case os.O_RDWR:
-		access = GENERIC_READ | GENERIC_WRITE
+		access = GenericRead | GenericWrite
 	}
 	if flag&os.O_CREATE != 0 {
-		access |= GENERIC_WRITE
+		access |= GenericWrite
 	}
 	if flag&os.O_APPEND != 0 {
-		access &^= GENERIC_WRITE
-		access |= FILE_APPEND_DATA
+		access &^= GenericWrite
+		access |= FileAppendData
 	}
 
-	sharemode := uint32(FILE_SHARE_READ | FILE_SHARE_WRITE)
+	sharemode := uint32(FileShareRead | FileShareWrite)
 
 	var createmode uint32
 	switch {
 	case flag&(os.O_CREATE|os.O_EXCL) == (os.O_CREATE | os.O_EXCL):
-		createmode = FILE_CREATE
+		createmode = FileCreate
 	case flag&(os.O_CREATE|os.O_TRUNC) == (os.O_CREATE | os.O_TRUNC):
-		createmode = FILE_OVERWRITE_IF
+		createmode = FileOverwriteIf
 	case flag&os.O_CREATE == os.O_CREATE:
-		createmode = FILE_OPEN_IF
+		createmode = FileOpenIf
 	case flag&os.O_TRUNC == os.O_TRUNC:
-		createmode = FILE_OVERWRITE
+		createmode = FileOverwrite
 	default:
-		createmode = FILE_OPEN
+		createmode = FileOpen
 	}
 
-	var attrs uint32 = FILE_ATTRIBUTE_NORMAL
+	var attrs uint32 = FileAttributeArchive
 	if perm&0200 == 0 {
-		attrs = FILE_ATTRIBUTE_READONLY
+		attrs = FileAttributeReadonly
 	}
 
 	req := &CreateRequest{
 		SecurityFlags:        0,
-		RequestedOplockLevel: SMB2_OPLOCK_LEVEL_NONE,
+		RequestedOplockLevel: Smb2OplockLevelNone,
 		ImpersonationLevel:   Impersonation,
 		SmbCreateFlags:       0,
 		DesiredAccess:        access,
 		FileAttributes:       attrs,
 		ShareAccess:          sharemode,
 		CreateDisposition:    createmode,
-		CreateOptions:        FILE_SYNCHRONOUS_IO_NONALERT,
+		CreateOptions:        FileSynchronousIoNonalert,
 	}
 
-	f, err := fs.createFile(name, req, true)
+	f, err := s.createFile(name, req, true)
 	if err != nil {
 		return nil, &os.PathError{Op: "open", Path: name, Err: err}
 	}
@@ -338,7 +338,7 @@ func (fs *Share) OpenFile(name string, flag int, perm os.FileMode) (*File, error
 	return f, nil
 }
 
-func (fs *Share) Mkdir(name string, perm os.FileMode) error {
+func (s *Share) Mkdir(name string, perm os.FileMode) error {
 	name = normPath(name)
 
 	if err := validatePath("mkdir", name, false); err != nil {
@@ -347,17 +347,17 @@ func (fs *Share) Mkdir(name string, perm os.FileMode) error {
 
 	req := &CreateRequest{
 		SecurityFlags:        0,
-		RequestedOplockLevel: SMB2_OPLOCK_LEVEL_NONE,
+		RequestedOplockLevel: Smb2OplockLevelNone,
 		ImpersonationLevel:   Impersonation,
 		SmbCreateFlags:       0,
-		DesiredAccess:        FILE_WRITE_ATTRIBUTES,
-		FileAttributes:       FILE_ATTRIBUTE_NORMAL,
-		ShareAccess:          FILE_SHARE_READ | FILE_SHARE_WRITE,
-		CreateDisposition:    FILE_CREATE,
-		CreateOptions:        FILE_DIRECTORY_FILE,
+		DesiredAccess:        FileWriteAttributes,
+		FileAttributes:       FileAttributeNormal,
+		ShareAccess:          FileShareRead | FileShareWrite,
+		CreateDisposition:    FileCreate,
+		CreateOptions:        FileDirectoryFile,
 	}
 
-	f, err := fs.createFile(name, req, false)
+	f, err := s.createFile(name, req, false)
 	if err != nil {
 		return &os.PathError{Op: "mkdir", Path: name, Err: err}
 	}
@@ -369,7 +369,7 @@ func (fs *Share) Mkdir(name string, perm os.FileMode) error {
 	return nil
 }
 
-func (fs *Share) Readlink(name string) (string, error) {
+func (s *Share) Readlink(name string) (string, error) {
 	name = normPath(name)
 
 	if err := validatePath("readlink", name, false); err != nil {
@@ -378,28 +378,28 @@ func (fs *Share) Readlink(name string) (string, error) {
 
 	create := &CreateRequest{
 		SecurityFlags:        0,
-		RequestedOplockLevel: SMB2_OPLOCK_LEVEL_NONE,
+		RequestedOplockLevel: Smb2OplockLevelNone,
 		ImpersonationLevel:   Impersonation,
 		SmbCreateFlags:       0,
-		DesiredAccess:        FILE_READ_ATTRIBUTES,
-		FileAttributes:       FILE_ATTRIBUTE_NORMAL,
-		ShareAccess:          FILE_SHARE_READ | FILE_SHARE_WRITE,
-		CreateDisposition:    FILE_OPEN,
-		CreateOptions:        FILE_OPEN_REPARSE_POINT,
+		DesiredAccess:        FileReadAttributes,
+		FileAttributes:       FileAttributeNormal,
+		ShareAccess:          FileShareRead | FileShareWrite,
+		CreateDisposition:    FileOpen,
+		CreateOptions:        FileOpenReparsePoint,
 	}
 
-	f, err := fs.createFile(name, create, false)
+	f, err := s.createFile(name, create, false)
 	if err != nil {
 		return "", &os.PathError{Op: "readlink", Path: name, Err: err}
 	}
 
 	req := &IoctlRequest{
-		CtlCode:           FSCTL_GET_REPARSE_POINT,
+		CtlCode:           FsctlGetReparsePoint,
 		OutputOffset:      0,
 		OutputCount:       0,
 		MaxInputResponse:  0,
 		MaxOutputResponse: uint32(f.maxTransactSize()),
-		Flags:             SMB2_0_IOCTL_IS_FSCTL,
+		Flags:             Smb20IoctlIsFsctl,
 		Input:             nil,
 	}
 
@@ -428,18 +428,18 @@ func (fs *Share) Readlink(name string) (string, error) {
 	return target, nil
 }
 
-func (fs *Share) Remove(name string) error {
-	err := fs.remove(name)
+func (s *Share) Remove(name string) error {
+	err := s.remove(name)
 	if os.IsPermission(err) {
-		if e := fs.Chmod(name, 0666); e != nil {
+		if e := s.Chmod(name, 0666); e != nil {
 			return err
 		}
-		return fs.remove(name)
+		return s.remove(name)
 	}
 	return err
 }
 
-func (fs *Share) remove(name string) error {
+func (s *Share) remove(name string) error {
 	name = normPath(name)
 
 	if err := validatePath("remove", name, false); err != nil {
@@ -448,19 +448,19 @@ func (fs *Share) remove(name string) error {
 
 	req := &CreateRequest{
 		SecurityFlags:        0,
-		RequestedOplockLevel: SMB2_OPLOCK_LEVEL_NONE,
+		RequestedOplockLevel: Smb2OplockLevelNone,
 		ImpersonationLevel:   Impersonation,
 		SmbCreateFlags:       0,
 		DesiredAccess:        DELETE,
 		FileAttributes:       0,
-		ShareAccess:          FILE_SHARE_DELETE,
-		CreateDisposition:    FILE_OPEN,
+		ShareAccess:          FileShareDelete,
+		CreateDisposition:    FileOpen,
 		// CreateOptions:        FILE_OPEN_REPARSE_POINT | FILE_DELETE_ON_CLOSE,
-		CreateOptions: FILE_OPEN_REPARSE_POINT,
+		CreateOptions: FileOpenReparsePoint,
 	}
 	// FILE_DELETE_ON_CLOSE doesn't work for reparse point, so use FileDispositionInformation instead
 
-	f, err := fs.createFile(name, req, false)
+	f, err := s.createFile(name, req, false)
 	if err != nil {
 		return &os.PathError{Op: "remove", Path: name, Err: err}
 	}
@@ -476,7 +476,7 @@ func (fs *Share) remove(name string) error {
 	return nil
 }
 
-func (fs *Share) Rename(oldpath, newpath string) error {
+func (s *Share) Rename(oldpath, newpath string) error {
 	oldpath = normPath(oldpath)
 	newpath = normPath(newpath)
 
@@ -490,17 +490,17 @@ func (fs *Share) Rename(oldpath, newpath string) error {
 
 	create := &CreateRequest{
 		SecurityFlags:        0,
-		RequestedOplockLevel: SMB2_OPLOCK_LEVEL_NONE,
+		RequestedOplockLevel: Smb2OplockLevelNone,
 		ImpersonationLevel:   Impersonation,
 		SmbCreateFlags:       0,
 		DesiredAccess:        DELETE,
-		FileAttributes:       FILE_ATTRIBUTE_NORMAL,
-		ShareAccess:          FILE_SHARE_DELETE,
-		CreateDisposition:    FILE_OPEN,
-		CreateOptions:        FILE_OPEN_REPARSE_POINT,
+		FileAttributes:       FileAttributeNormal,
+		ShareAccess:          FileShareDelete,
+		CreateDisposition:    FileOpen,
+		CreateOptions:        FileOpenReparsePoint,
 	}
 
-	f, err := fs.createFile(oldpath, create, false)
+	f, err := s.createFile(oldpath, create, false)
 	if err != nil {
 		return &os.LinkError{Op: "rename", Old: oldpath, New: newpath, Err: err}
 	}
@@ -534,7 +534,7 @@ func (fs *Share) Rename(oldpath, newpath string) error {
 // This implementation always assumes that format is absolute path.
 // So, if you know the target server is Windows, you should avoid that format.
 // If you want to use an absolute target path on windows, you can use // `C:\dir\name` format instead.
-func (fs *Share) Symlink(target, linkpath string) error {
+func (s *Share) Symlink(target, linkpath string) error {
 	target = normPath(target)
 	linkpath = normPath(linkpath)
 
@@ -554,13 +554,13 @@ func (fs *Share) Symlink(target, linkpath string) error {
 		}
 
 		if target[2] != '\\' {
-			rdbuf.Flags = SYMLINK_FLAG_RELATIVE
+			rdbuf.Flags = SymlinkFlagRelative
 		}
 		rdbuf.SubstituteName = `\??\` + target
 		rdbuf.PrintName = rdbuf.SubstituteName[4:]
 	} else {
 		if target[0] != '\\' {
-			rdbuf.Flags = SYMLINK_FLAG_RELATIVE // It's not true on window server.
+			rdbuf.Flags = SymlinkFlagRelative // It's not true on window server.
 		}
 		rdbuf.SubstituteName = target
 		rdbuf.PrintName = rdbuf.SubstituteName
@@ -568,28 +568,28 @@ func (fs *Share) Symlink(target, linkpath string) error {
 
 	create := &CreateRequest{
 		SecurityFlags:        0,
-		RequestedOplockLevel: SMB2_OPLOCK_LEVEL_NONE,
+		RequestedOplockLevel: Smb2OplockLevelNone,
 		ImpersonationLevel:   Impersonation,
 		SmbCreateFlags:       0,
-		DesiredAccess:        FILE_WRITE_ATTRIBUTES | DELETE,
-		FileAttributes:       FILE_ATTRIBUTE_REPARSE_POINT,
-		ShareAccess:          FILE_SHARE_READ | FILE_SHARE_WRITE,
-		CreateDisposition:    FILE_CREATE,
-		CreateOptions:        FILE_OPEN_REPARSE_POINT,
+		DesiredAccess:        FileWriteAttributes | DELETE,
+		FileAttributes:       FileAttributeReparsePoint,
+		ShareAccess:          FileShareRead | FileShareWrite,
+		CreateDisposition:    FileCreate,
+		CreateOptions:        FileOpenReparsePoint,
 	}
 
-	f, err := fs.createFile(linkpath, create, false)
+	f, err := s.createFile(linkpath, create, false)
 	if err != nil {
 		return &os.LinkError{Op: "symlink", Old: target, New: linkpath, Err: err}
 	}
 
 	req := &IoctlRequest{
-		CtlCode:           FSCTL_SET_REPARSE_POINT,
+		CtlCode:           FsctlSetReparsePoint,
 		OutputOffset:      0,
 		OutputCount:       0,
 		MaxInputResponse:  0,
 		MaxOutputResponse: 0,
-		Flags:             SMB2_0_IOCTL_IS_FSCTL,
+		Flags:             Smb20IoctlIsFsctl,
 		Input:             rdbuf,
 	}
 
@@ -609,7 +609,7 @@ func (fs *Share) Symlink(target, linkpath string) error {
 	return nil
 }
 
-func (fs *Share) Lstat(name string) (os.FileInfo, error) {
+func (s *Share) Lstat(name string) (os.FileInfo, error) {
 	name = normPath(name)
 
 	if err := validatePath("lstat", name, false); err != nil {
@@ -618,17 +618,17 @@ func (fs *Share) Lstat(name string) (os.FileInfo, error) {
 
 	create := &CreateRequest{
 		SecurityFlags:        0,
-		RequestedOplockLevel: SMB2_OPLOCK_LEVEL_NONE,
+		RequestedOplockLevel: Smb2OplockLevelNone,
 		ImpersonationLevel:   Impersonation,
 		SmbCreateFlags:       0,
-		DesiredAccess:        FILE_READ_ATTRIBUTES,
-		FileAttributes:       FILE_ATTRIBUTE_NORMAL,
-		ShareAccess:          FILE_SHARE_READ | FILE_SHARE_WRITE,
-		CreateDisposition:    FILE_OPEN,
-		CreateOptions:        FILE_OPEN_REPARSE_POINT,
+		DesiredAccess:        FileReadAttributes,
+		FileAttributes:       FileAttributeNormal,
+		ShareAccess:          FileShareRead | FileShareWrite,
+		CreateDisposition:    FileOpen,
+		CreateOptions:        FileOpenReparsePoint,
 	}
 
-	f, err := fs.createFile(name, create, false)
+	f, err := s.createFile(name, create, false)
 	if err != nil {
 		return nil, &os.PathError{Op: "stat", Path: name, Err: err}
 	}
@@ -643,7 +643,7 @@ func (fs *Share) Lstat(name string) (os.FileInfo, error) {
 	return fi, nil
 }
 
-func (fs *Share) Stat(name string) (os.FileInfo, error) {
+func (s *Share) Stat(name string) (os.FileInfo, error) {
 	name = normPath(name)
 
 	if err := validatePath("stat", name, false); err != nil {
@@ -652,17 +652,17 @@ func (fs *Share) Stat(name string) (os.FileInfo, error) {
 
 	create := &CreateRequest{
 		SecurityFlags:        0,
-		RequestedOplockLevel: SMB2_OPLOCK_LEVEL_NONE,
+		RequestedOplockLevel: Smb2OplockLevelNone,
 		ImpersonationLevel:   Impersonation,
 		SmbCreateFlags:       0,
-		DesiredAccess:        FILE_READ_ATTRIBUTES,
-		FileAttributes:       FILE_ATTRIBUTE_NORMAL,
-		ShareAccess:          FILE_SHARE_READ | FILE_SHARE_WRITE,
-		CreateDisposition:    FILE_OPEN,
+		DesiredAccess:        FileReadAttributes,
+		FileAttributes:       FileAttributeNormal,
+		ShareAccess:          FileShareRead | FileShareWrite,
+		CreateDisposition:    FileOpen,
 		CreateOptions:        0,
 	}
 
-	f, err := fs.createFile(name, create, true)
+	f, err := s.createFile(name, create, true)
 	if err != nil {
 		return nil, &os.PathError{Op: "stat", Path: name, Err: err}
 	}
@@ -677,7 +677,7 @@ func (fs *Share) Stat(name string) (os.FileInfo, error) {
 	return fi, nil
 }
 
-func (fs *Share) Truncate(name string, size int64) error {
+func (s *Share) Truncate(name string, size int64) error {
 	name = normPath(name)
 
 	if err := validatePath("truncate", name, false); err != nil {
@@ -690,17 +690,17 @@ func (fs *Share) Truncate(name string, size int64) error {
 
 	create := &CreateRequest{
 		SecurityFlags:        0,
-		RequestedOplockLevel: SMB2_OPLOCK_LEVEL_NONE,
+		RequestedOplockLevel: Smb2OplockLevelNone,
 		ImpersonationLevel:   Impersonation,
 		SmbCreateFlags:       0,
-		DesiredAccess:        FILE_WRITE_DATA,
-		FileAttributes:       FILE_ATTRIBUTE_NORMAL,
-		ShareAccess:          FILE_SHARE_READ | FILE_SHARE_WRITE,
-		CreateDisposition:    FILE_OPEN,
-		CreateOptions:        FILE_NON_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT,
+		DesiredAccess:        FileWriteData,
+		FileAttributes:       FileAttributeNormal,
+		ShareAccess:          FileShareRead | FileShareWrite,
+		CreateDisposition:    FileOpen,
+		CreateOptions:        FileNonDirectoryFile | FileSynchronousIoNonalert,
 	}
 
-	f, err := fs.createFile(name, create, true)
+	f, err := s.createFile(name, create, true)
 	if err != nil {
 		return &os.PathError{Op: "truncate", Path: name, Err: err}
 	}
@@ -715,7 +715,7 @@ func (fs *Share) Truncate(name string, size int64) error {
 	return nil
 }
 
-func (fs *Share) Chtimes(name string, atime time.Time, mtime time.Time) error {
+func (s *Share) Chtimes(name string, atime time.Time, mtime time.Time) error {
 	name = normPath(name)
 
 	if err := validatePath("chtimes", name, false); err != nil {
@@ -724,17 +724,17 @@ func (fs *Share) Chtimes(name string, atime time.Time, mtime time.Time) error {
 
 	create := &CreateRequest{
 		SecurityFlags:        0,
-		RequestedOplockLevel: SMB2_OPLOCK_LEVEL_NONE,
+		RequestedOplockLevel: Smb2OplockLevelNone,
 		ImpersonationLevel:   Impersonation,
 		SmbCreateFlags:       0,
-		DesiredAccess:        FILE_WRITE_ATTRIBUTES,
-		FileAttributes:       FILE_ATTRIBUTE_NORMAL,
-		ShareAccess:          FILE_SHARE_READ | FILE_SHARE_WRITE,
-		CreateDisposition:    FILE_OPEN,
+		DesiredAccess:        FileWriteAttributes,
+		FileAttributes:       FileAttributeNormal,
+		ShareAccess:          FileShareRead | FileShareWrite,
+		CreateDisposition:    FileOpen,
 		CreateOptions:        0,
 	}
 
-	f, err := fs.createFile(name, create, true)
+	f, err := s.createFile(name, create, true)
 	if err != nil {
 		return &os.PathError{Op: "chtimes", Path: name, Err: err}
 	}
@@ -758,7 +758,7 @@ func (fs *Share) Chtimes(name string, atime time.Time, mtime time.Time) error {
 	return nil
 }
 
-func (fs *Share) Chmod(name string, mode os.FileMode) error {
+func (s *Share) SetArchive(name string, archive bool) error {
 	name = normPath(name)
 
 	if err := validatePath("chmod", name, false); err != nil {
@@ -767,17 +767,87 @@ func (fs *Share) Chmod(name string, mode os.FileMode) error {
 
 	create := &CreateRequest{
 		SecurityFlags:        0,
-		RequestedOplockLevel: SMB2_OPLOCK_LEVEL_NONE,
+		RequestedOplockLevel: Smb2OplockLevelNone,
 		ImpersonationLevel:   Impersonation,
 		SmbCreateFlags:       0,
-		DesiredAccess:        FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES,
-		FileAttributes:       FILE_ATTRIBUTE_NORMAL,
-		ShareAccess:          FILE_SHARE_READ | FILE_SHARE_WRITE,
-		CreateDisposition:    FILE_OPEN,
+		DesiredAccess:        FileReadAttributes | FileWriteAttributes,
+		FileAttributes:       FileAttributeNormal,
+		ShareAccess:          FileShareRead | FileShareWrite,
+		CreateDisposition:    FileOpen,
 		CreateOptions:        0,
 	}
 
-	f, err := fs.createFile(name, create, true)
+	f, err := s.createFile(name, create, true)
+	if err != nil {
+		return &os.PathError{Op: "chmod", Path: name, Err: err}
+	}
+
+	req := &QueryInfoRequest{
+		InfoType:              Smb20InfoFile,
+		FileInfoClass:         FileBasicInformation,
+		AdditionalInformation: 0,
+		Flags:                 0,
+		OutputBufferLength:    40,
+	}
+
+	infoBytes, err := f.queryInfo(req)
+	if err != nil {
+		return err
+	}
+
+	base := FileBasicInformationDecoder(infoBytes)
+	if base.IsInvalid() {
+		return &InvalidResponseError{"broken query info response format"}
+	}
+
+	// attrs := base.FileAttributes()
+
+	attrs := FileAttributeNormal
+	if archive {
+		attrs = FileAttributeArchive
+	}
+	// if mode&0200 != 0 {
+	// attrs &^= FILE_ATTRIBUTE_ARCHIVE
+	// attrs &^= FILE_ATTRIBUTE_READONLY
+	// } else {
+	// attrs |= FILE_ATTRIBUTE_ARCHIVE
+	// }
+
+	info := &SetInfoRequest{
+		FileInfoClass:         FileBasicInformation,
+		AdditionalInformation: 0,
+		Input: &FileBasicInformationEncoder{
+			FileAttributes: uint32(attrs),
+		},
+	}
+
+	err = f.setInfo(info)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Share) Chmod(name string, mode os.FileMode) error {
+	name = normPath(name)
+
+	if err := validatePath("chmod", name, false); err != nil {
+		return err
+	}
+
+	create := &CreateRequest{
+		SecurityFlags:        0,
+		RequestedOplockLevel: Smb2OplockLevelNone,
+		ImpersonationLevel:   Impersonation,
+		SmbCreateFlags:       0,
+		DesiredAccess:        FileReadAttributes | FileWriteAttributes,
+		FileAttributes:       FileAttributeNormal,
+		ShareAccess:          FileShareRead | FileShareWrite,
+		CreateDisposition:    FileOpen,
+		CreateOptions:        0,
+	}
+
+	f, err := s.createFile(name, create, true)
 	if err != nil {
 		return &os.PathError{Op: "chmod", Path: name, Err: err}
 	}
@@ -792,8 +862,8 @@ func (fs *Share) Chmod(name string, mode os.FileMode) error {
 	return nil
 }
 
-func (fs *Share) ReadDir(dirname string) ([]os.FileInfo, error) {
-	f, err := fs.Open(dirname)
+func (s *Share) ReadDir(dirname string) ([]os.FileInfo, error) {
+	f, err := s.Open(dirname)
 	if err != nil {
 		return nil, err
 	}
@@ -814,8 +884,8 @@ const (
 	maxInt  = 1<<(intSize-1) - 1
 )
 
-func (fs *Share) ReadFile(filename string) ([]byte, error) {
-	f, err := fs.Open(filename)
+func (s *Share) ReadFile(filename string) ([]byte, error) {
+	f, err := s.Open(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -856,8 +926,8 @@ func (fs *Share) ReadFile(filename string) ([]byte, error) {
 	}
 }
 
-func (fs *Share) WriteFile(filename string, data []byte, perm os.FileMode) error {
-	f, err := fs.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm)
+func (s *Share) WriteFile(filename string, data []byte, perm os.FileMode) error {
+	f, err := s.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm)
 	if err != nil {
 		return err
 	}
@@ -870,7 +940,7 @@ func (fs *Share) WriteFile(filename string, data []byte, perm os.FileMode) error
 	return err
 }
 
-func (fs *Share) Statfs(name string) (FileFsInfo, error) {
+func (s *Share) Statfs(name string) (FileFsInfo, error) {
 	name = normPath(name)
 
 	if err := validatePath("statfs", name, false); err != nil {
@@ -879,17 +949,17 @@ func (fs *Share) Statfs(name string) (FileFsInfo, error) {
 
 	create := &CreateRequest{
 		SecurityFlags:        0,
-		RequestedOplockLevel: SMB2_OPLOCK_LEVEL_NONE,
+		RequestedOplockLevel: Smb2OplockLevelNone,
 		ImpersonationLevel:   Impersonation,
 		SmbCreateFlags:       0,
-		DesiredAccess:        FILE_READ_ATTRIBUTES,
-		FileAttributes:       FILE_ATTRIBUTE_NORMAL,
-		ShareAccess:          FILE_SHARE_READ | FILE_SHARE_WRITE,
-		CreateDisposition:    FILE_OPEN,
-		CreateOptions:        FILE_DIRECTORY_FILE,
+		DesiredAccess:        FileReadAttributes,
+		FileAttributes:       FileAttributeNormal,
+		ShareAccess:          FileShareRead | FileShareWrite,
+		CreateDisposition:    FileOpen,
+		CreateOptions:        FileDirectoryFile,
 	}
 
-	f, err := fs.createFile(name, create, true)
+	f, err := s.createFile(name, create, true)
 	if err != nil {
 		return nil, &os.PathError{Op: "statfs", Path: name, Err: err}
 	}
@@ -904,15 +974,15 @@ func (fs *Share) Statfs(name string) (FileFsInfo, error) {
 	return fi, nil
 }
 
-func (fs *Share) createFile(name string, req *CreateRequest, followSymlinks bool) (f *File, err error) {
+func (s *Share) createFile(name string, req *CreateRequest, followSymlinks bool) (f *File, err error) {
 	if followSymlinks {
-		return fs.createFileRec(name, req)
+		return s.createFileRec(name, req)
 	}
 
-	req.CreditCharge, _, err = fs.loanCredit(0)
+	req.CreditCharge, _, err = s.loanCredit(0)
 	defer func() {
 		if err != nil {
-			fs.chargeCredit(req.CreditCharge)
+			s.chargeCredit(req.CreditCharge)
 		}
 	}()
 	if err != nil {
@@ -921,7 +991,7 @@ func (fs *Share) createFile(name string, req *CreateRequest, followSymlinks bool
 
 	req.Name = name
 
-	res, err := fs.sendRecv(SMB2_CREATE, req)
+	res, err := s.sendRecv(Smb2Create, req)
 	if err != nil {
 		return nil, err
 	}
@@ -931,17 +1001,17 @@ func (fs *Share) createFile(name string, req *CreateRequest, followSymlinks bool
 		return nil, &InvalidResponseError{"broken create response format"}
 	}
 
-	f = fs.newFile(r, name)
+	f = s.newFile(r, name)
 
 	return f, nil
 }
 
-func (fs *Share) createFileRec(name string, req *CreateRequest) (f *File, err error) {
+func (s *Share) createFileRec(name string, req *CreateRequest) (f *File, err error) {
 	for i := 0; i < clientMaxSymlinkDepth; i++ {
-		req.CreditCharge, _, err = fs.loanCredit(0)
+		req.CreditCharge, _, err = s.loanCredit(0)
 		defer func() {
 			if err != nil {
-				fs.chargeCredit(req.CreditCharge)
+				s.chargeCredit(req.CreditCharge)
 			}
 		}()
 		if err != nil {
@@ -950,9 +1020,9 @@ func (fs *Share) createFileRec(name string, req *CreateRequest) (f *File, err er
 
 		req.Name = name
 
-		res, err := fs.sendRecv(SMB2_CREATE, req)
+		res, err := s.sendRecv(Smb2Create, req)
 		if err != nil {
-			if rerr, ok := err.(*ResponseError); ok && NtStatus(rerr.Code) == STATUS_STOPPED_ON_SYMLINK {
+			if rerr, ok := err.(*ResponseError); ok && NtStatus(rerr.Code) == StatusStoppedOnSymlink {
 				if len(rerr.data) > 0 {
 					name, err = evalSymlinkError(req.Name, rerr.data[0])
 					if err != nil {
@@ -969,7 +1039,7 @@ func (fs *Share) createFileRec(name string, req *CreateRequest) (f *File, err er
 			return nil, &InvalidResponseError{"broken create response format"}
 		}
 
-		f = fs.newFile(r, name)
+		f = s.newFile(r, name)
 
 		return f, nil
 	}
@@ -997,20 +1067,20 @@ func evalSymlinkError(name string, errData []byte) (string, error) {
 		target = target[4:]
 	}
 
-	if d.Flags()&SYMLINK_FLAG_RELATIVE == 0 {
+	if d.Flags()&SymlinkFlagRelative == 0 {
 		return target + u, nil
 	}
 
 	return dir(ud) + target + u, nil
 }
 
-func (fs *Share) sendRecv(cmd uint16, req Packet) (res []byte, err error) {
-	rr, err := fs.send(req, fs.ctx)
+func (s *Share) sendRecv(cmd uint16, req Packet) (res []byte, err error) {
+	rr, err := s.send(req, s.ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	pkt, err := fs.recv(rr)
+	pkt, err := s.recv(rr)
 	if err != nil {
 		return nil, err
 	}
@@ -1018,8 +1088,8 @@ func (fs *Share) sendRecv(cmd uint16, req Packet) (res []byte, err error) {
 	return accept(cmd, pkt)
 }
 
-func (fs *Share) loanCredit(payloadSize int) (creditCharge uint16, grantedPayloadSize int, err error) {
-	return fs.session.conn.loanCredit(payloadSize, fs.ctx)
+func (s *Share) loanCredit(payloadSize int) (creditCharge uint16, grantedPayloadSize int, err error) {
+	return s.session.conn.loanCredit(payloadSize, s.ctx)
 }
 
 type File struct {
@@ -1060,7 +1130,7 @@ func (f *File) close() error {
 
 	req.FileId = f.fd
 
-	res, err := f.sendRecv(SMB2_CLOSE, req)
+	res, err := f.sendRecv(Smb2Close, req)
 	if err != nil {
 		return err
 	}
@@ -1113,7 +1183,7 @@ func (f *File) Read(b []byte) (n int, err error) {
 		}
 	}
 	if err != nil {
-		if err, ok := err.(*ResponseError); ok && NtStatus(err.Code) == STATUS_END_OF_FILE {
+		if err, ok := err.(*ResponseError); ok && NtStatus(err.Code) == StatusEndOfFile {
 			return n, io.EOF
 		}
 		return n, &os.PathError{Op: "read", Path: f.name, Err: err}
@@ -1130,7 +1200,7 @@ func (f *File) ReadAt(b []byte, off int64) (n int, err error) {
 
 	n, err = f.readAt(b, off)
 	if err != nil {
-		if err, ok := err.(*ResponseError); ok && NtStatus(err.Code) == STATUS_END_OF_FILE {
+		if err, ok := err.(*ResponseError); ok && NtStatus(err.Code) == StatusEndOfFile {
 			return n, io.EOF
 		}
 		return n, &os.PathError{Op: "read", Path: f.name, Err: err}
@@ -1146,7 +1216,7 @@ func (f *File) maxReadSize() int {
 	if size > winMaxPayloadSize {
 		size = winMaxPayloadSize
 	}
-	if f.fs.conn.capabilities&SMB2_GLOBAL_CAP_LARGE_MTU == 0 {
+	if f.fs.conn.capabilities&Smb2GlobalCapLargeMtu == 0 {
 		if size > singleCreditMaxPayloadSize {
 			size = singleCreditMaxPayloadSize
 		}
@@ -1159,7 +1229,7 @@ func (f *File) maxWriteSize() int {
 	if size > winMaxPayloadSize {
 		size = winMaxPayloadSize
 	}
-	if f.fs.conn.capabilities&SMB2_GLOBAL_CAP_LARGE_MTU == 0 {
+	if f.fs.conn.capabilities&Smb2GlobalCapLargeMtu == 0 {
 		if size > singleCreditMaxPayloadSize {
 			size = singleCreditMaxPayloadSize
 		}
@@ -1172,7 +1242,7 @@ func (f *File) maxTransactSize() int {
 	if size > winMaxPayloadSize {
 		size = winMaxPayloadSize
 	}
-	if f.fs.conn.capabilities&SMB2_GLOBAL_CAP_LARGE_MTU == 0 {
+	if f.fs.conn.capabilities&Smb2GlobalCapLargeMtu == 0 {
 		if size > singleCreditMaxPayloadSize {
 			size = singleCreditMaxPayloadSize
 		}
@@ -1194,7 +1264,7 @@ func (f *File) readAt(b []byte, off int64) (n int, err error) {
 		case len(b)-n <= maxReadSize:
 			bs, isEOF, err := f.readAtChunk(len(b)-n, int64(n)+off)
 			if err != nil {
-				if err, ok := err.(*ResponseError); ok && NtStatus(err.Code) == STATUS_END_OF_FILE && n != 0 {
+				if err, ok := err.(*ResponseError); ok && NtStatus(err.Code) == StatusEndOfFile && n != 0 {
 					return n, nil
 				}
 				return 0, err
@@ -1208,7 +1278,7 @@ func (f *File) readAt(b []byte, off int64) (n int, err error) {
 		default:
 			bs, isEOF, err := f.readAtChunk(maxReadSize, int64(n)+off)
 			if err != nil {
-				if err, ok := err.(*ResponseError); ok && NtStatus(err.Code) == STATUS_END_OF_FILE && n != 0 {
+				if err, ok := err.(*ResponseError); ok && NtStatus(err.Code) == StatusEndOfFile && n != 0 {
 					return n, nil
 				}
 				return 0, err
@@ -1249,7 +1319,7 @@ func (f *File) readAtChunk(n int, off int64) (bs []byte, isEOF bool, err error) 
 
 	req.CreditCharge = creditCharge
 
-	res, err := f.sendRecv(SMB2_READ, req)
+	res, err := f.sendRecv(Smb2Read, req)
 	if err != nil {
 		return nil, false, err
 	}
@@ -1278,7 +1348,7 @@ func (f *File) Readdir(n int) (fi []os.FileInfo, err error) {
 				f.dirents = append(f.dirents, dirents...)
 			}
 			if err != nil {
-				if err, ok := err.(*ResponseError); ok && NtStatus(err.Code) == STATUS_NO_MORE_FILES {
+				if err, ok := err.(*ResponseError); ok && NtStatus(err.Code) == StatusNoMoreFiles {
 					f.noMoreFiles = true
 					break
 				}
@@ -1344,7 +1414,7 @@ func (f *File) seek(offset int64, whence int) (ret int64, err error) {
 		f.offset += offset
 	case io.SeekEnd:
 		req := &QueryInfoRequest{
-			InfoType:              SMB2_0_INFO_FILE,
+			InfoType:              Smb20InfoFile,
 			FileInfoClass:         FileStandardInformation,
 			AdditionalInformation: 0,
 			Flags:                 0,
@@ -1379,7 +1449,7 @@ func (f *File) Stat() (os.FileInfo, error) {
 
 func (f *File) stat() (os.FileInfo, error) {
 	req := &QueryInfoRequest{
-		InfoType:              SMB2_0_INFO_FILE,
+		InfoType:              Smb20InfoFile,
 		FileInfoClass:         FileAllInformation,
 		AdditionalInformation: 0,
 		Flags:                 0,
@@ -1457,7 +1527,7 @@ func (fi *fileFsFullSizeInformation) AvailableBlockCount() uint64 {
 
 func (f *File) statfs() (FileFsInfo, error) {
 	req := &QueryInfoRequest{
-		InfoType:              SMB2_0_INFO_FILESYSTEM,
+		InfoType:              Smb20InfoFilesystem,
 		FileInfoClass:         FileFsFullSizeInformation,
 		AdditionalInformation: 0,
 		Flags:                 0,
@@ -1497,7 +1567,7 @@ func (f *File) Sync() (err error) {
 		return &os.PathError{Op: "sync", Path: f.name, Err: err}
 	}
 
-	res, err := f.sendRecv(SMB2_FLUSH, req)
+	res, err := f.sendRecv(Smb2Flush, req)
 	if err != nil {
 		return &os.PathError{Op: "sync", Path: f.name, Err: err}
 	}
@@ -1548,7 +1618,7 @@ func (f *File) Chmod(mode os.FileMode) error {
 
 func (f *File) chmod(mode os.FileMode) error {
 	req := &QueryInfoRequest{
-		InfoType:              SMB2_0_INFO_FILE,
+		InfoType:              Smb20InfoFile,
 		FileInfoClass:         FileBasicInformation,
 		AdditionalInformation: 0,
 		Flags:                 0,
@@ -1568,9 +1638,9 @@ func (f *File) chmod(mode os.FileMode) error {
 	attrs := base.FileAttributes()
 
 	if mode&0200 != 0 {
-		attrs &^= FILE_ATTRIBUTE_READONLY
+		attrs &^= FileAttributeReadonly
 	} else {
-		attrs |= FILE_ATTRIBUTE_READONLY
+		attrs |= FileAttributeReadonly
 	}
 
 	info := &SetInfoRequest{
@@ -1677,7 +1747,7 @@ func (f *File) writeAtChunk(b []byte, off int64) (n int, err error) {
 
 	req.CreditCharge = creditCharge
 
-	res, err := f.sendRecv(SMB2_WRITE, req)
+	res, err := f.sendRecv(Smb2Write, req)
 	if err != nil {
 		return 0, err
 	}
@@ -1722,17 +1792,17 @@ func (f *File) copyTo(wf *File) (supported bool, n int64, err error) {
 	defer f.m.Unlock()
 
 	req := &IoctlRequest{
-		CtlCode:           FSCTL_SRV_REQUEST_RESUME_KEY,
+		CtlCode:           FsctlSrvRequestResumeKey,
 		OutputOffset:      0,
 		OutputCount:       0,
 		MaxInputResponse:  0,
 		MaxOutputResponse: 32,
-		Flags:             SMB2_0_IOCTL_IS_FSCTL,
+		Flags:             Smb20IoctlIsFsctl,
 	}
 
 	output, err := f.ioctl(req)
 	if err != nil {
-		if rerr, ok := err.(*ResponseError); ok && NtStatus(rerr.Code) == STATUS_NOT_SUPPORTED {
+		if rerr, ok := err.(*ResponseError); ok && NtStatus(rerr.Code) == StatusNotSupported {
 			return false, -1, nil
 		}
 
@@ -1810,12 +1880,12 @@ func (f *File) copyTo(wf *File) (supported bool, n int64, err error) {
 		copy(scc.SourceKey[:], sr.ResumeKey())
 
 		cReq := &IoctlRequest{
-			CtlCode:           FSCTL_SRV_COPYCHUNK,
+			CtlCode:           FsctlSrvCopychunk,
 			OutputOffset:      0,
 			OutputCount:       0,
 			MaxInputResponse:  0,
 			MaxOutputResponse: 24,
-			Flags:             SMB2_0_IOCTL_IS_FSCTL,
+			Flags:             Smb20IoctlIsFsctl,
 			Input:             scc,
 		}
 
@@ -1910,7 +1980,7 @@ func (f *File) ioctl(req *IoctlRequest) (output []byte, err error) {
 
 	req.FileId = f.fd
 
-	res, err := f.sendRecv(SMB2_IOCTL, req)
+	res, err := f.sendRecv(Smb2Ioctl, req)
 	if err != nil {
 		r := IoctlResponseDecoder(res)
 		if r.IsInvalid() {
@@ -1954,7 +2024,7 @@ func (f *File) readdir(pattern string) (fi []os.FileInfo, err error) {
 
 	req.FileId = f.fd
 
-	res, err := f.sendRecv(SMB2_QUERY_DIRECTORY, req)
+	res, err := f.sendRecv(Smb2QueryDirectory, req)
 	if err != nil {
 		return nil, err
 	}
@@ -2018,7 +2088,7 @@ func (f *File) queryInfo(req *QueryInfoRequest) (infoBytes []byte, err error) {
 
 	req.FileId = f.fd
 
-	res, err := f.sendRecv(SMB2_QUERY_INFO, req)
+	res, err := f.sendRecv(Smb2QueryInfo, req)
 	if err != nil {
 		return nil, err
 	}
@@ -2050,9 +2120,9 @@ func (f *File) setInfo(req *SetInfoRequest) (err error) {
 
 	req.FileId = f.fd
 
-	req.InfoType = SMB2_0_INFO_FILE
+	req.InfoType = Smb20InfoFile
 
-	res, err := f.sendRecv(SMB2_SET_INFO, req)
+	res, err := f.sendRecv(Smb2SetInfo, req)
 	if err != nil {
 		return err
 	}
@@ -2091,17 +2161,17 @@ func (fs *FileStat) Size() int64 {
 func (fs *FileStat) Mode() os.FileMode {
 	var m os.FileMode
 
-	if fs.FileAttributes&FILE_ATTRIBUTE_DIRECTORY != 0 {
+	if fs.FileAttributes&FileAttributeDirectory != 0 {
 		m |= os.ModeDir | 0111
 	}
 
-	if fs.FileAttributes&FILE_ATTRIBUTE_READONLY != 0 {
+	if fs.FileAttributes&FileAttributeReadonly != 0 {
 		m |= 0444
 	} else {
 		m |= 0666
 	}
 
-	if fs.FileAttributes&FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+	if fs.FileAttributes&FileAttributeReparsePoint != 0 {
 		m |= os.ModeSymlink
 	}
 

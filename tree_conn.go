@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	. "github.com/hirochachacha/go-smb2/internal/smb2"
+	. "github.com/kjbreil/go-smb2/internal/smb2"
 )
 
 type treeConn struct {
@@ -36,7 +36,7 @@ func treeConnect(s *session, path string, flags uint16, ctx context.Context) (*t
 		return nil, err
 	}
 
-	res, err := accept(SMB2_TREE_CONNECT, pkt)
+	res, err := accept(Smb2TreeConnect, pkt)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (tc *treeConn) disconnect(ctx context.Context) error {
 
 	req.CreditCharge = 1
 
-	res, err := tc.sendRecv(SMB2_TREE_DISCONNECT, req, ctx)
+	res, err := tc.sendRecv(Smb2TreeDisconnect, req, ctx)
 	if err != nil {
 		return err
 	}

@@ -12,11 +12,11 @@ import (
 	"fmt"
 	"hash"
 
-	"github.com/hirochachacha/go-smb2/internal/crypto/ccm"
-	"github.com/hirochachacha/go-smb2/internal/crypto/cmac"
+	"github.com/kjbreil/go-smb2/internal/crypto/ccm"
+	"github.com/kjbreil/go-smb2/internal/crypto/cmac"
 
-	. "github.com/hirochachacha/go-smb2/internal/erref"
-	. "github.com/hirochachacha/go-smb2/internal/smb2"
+	. "github.com/kjbreil/go-smb2/internal/erref"
+	. "github.com/kjbreil/go-smb2/internal/smb2"
 )
 
 func sessionSetup(conn *conn, i Initiator, ctx context.Context) (*session, error) {
@@ -29,16 +29,16 @@ func sessionSetup(conn *conn, i Initiator, ctx context.Context) (*session, error
 
 	req := &SessionSetupRequest{
 		Flags:             0,
-		Capabilities:      conn.capabilities & (SMB2_GLOBAL_CAP_DFS),
+		Capabilities:      conn.capabilities & (Smb2GlobalCapDfs),
 		Channel:           0,
 		SecurityBuffer:    outputToken,
 		PreviousSessionId: 0,
 	}
 
 	if conn.requireSigning {
-		req.SecurityMode = SMB2_NEGOTIATE_SIGNING_REQUIRED
+		req.SecurityMode = Smb2NegotiateSigningRequired
 	} else {
-		req.SecurityMode = SMB2_NEGOTIATE_SIGNING_ENABLED
+		req.SecurityMode = Smb2NegotiateSigningEnabled
 	}
 
 	req.CreditCharge = 1
@@ -56,11 +56,11 @@ func sessionSetup(conn *conn, i Initiator, ctx context.Context) (*session, error
 
 	p := PacketCodec(pkt)
 
-	if NtStatus(p.Status()) != STATUS_MORE_PROCESSING_REQUIRED {
-		return nil, &InvalidResponseError{fmt.Sprintf("expected status: %v, got %v", STATUS_MORE_PROCESSING_REQUIRED, NtStatus(p.Status()))}
+	if NtStatus(p.Status()) != StatusMoreProcessingRequired {
+		return nil, &InvalidResponseError{fmt.Sprintf("expected status: %v, got %v", StatusMoreProcessingRequired, NtStatus(p.Status()))}
 	}
 
-	res, err := accept(SMB2_SESSION_SETUP, pkt)
+	res, err := accept(Smb2SessionSetup, pkt)
 	if err != nil {
 		return nil, err
 	}
@@ -72,10 +72,10 @@ func sessionSetup(conn *conn, i Initiator, ctx context.Context) (*session, error
 
 	sessionFlags := r.SessionFlags()
 	if conn.requireSigning {
-		if sessionFlags&SMB2_SESSION_FLAG_IS_GUEST != 0 {
+		if sessionFlags&Smb2SessionFlagIsGuest != 0 {
 			return nil, &InvalidResponseError{"guest account doesn't support signing"}
 		}
-		if sessionFlags&SMB2_SESSION_FLAG_IS_NULL != 0 {
+		if sessionFlags&Smb2SessionFlagIsNull != 0 {
 			return nil, &InvalidResponseError{"anonymous account doesn't support signing"}
 		}
 	}
@@ -124,7 +124,7 @@ func sessionSetup(conn *conn, i Initiator, ctx context.Context) (*session, error
 		return nil, err
 	}
 
-	if s.sessionFlags&(SMB2_SESSION_FLAG_IS_GUEST|SMB2_SESSION_FLAG_IS_NULL) == 0 {
+	if s.sessionFlags&(Smb2SessionFlagIsGuest|Smb2SessionFlagIsNull) == 0 {
 		sessionKey := spnego.sessionKey()
 
 		switch conn.dialect {
@@ -230,7 +230,7 @@ func sessionSetup(conn *conn, i Initiator, ctx context.Context) (*session, error
 		return nil, err
 	}
 
-	res, err = accept(SMB2_SESSION_SETUP, pkt)
+	res, err = accept(Smb2SessionSetup, pkt)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +240,7 @@ func sessionSetup(conn *conn, i Initiator, ctx context.Context) (*session, error
 		return nil, &InvalidResponseError{"broken session setup response format"}
 	}
 
-	if NtStatus(PacketCodec(pkt).Status()) != STATUS_SUCCESS {
+	if NtStatus(PacketCodec(pkt).Status()) != StatusSuccess {
 		return nil, &InvalidResponseError{"broken session setup response format"}
 	}
 
@@ -272,7 +272,7 @@ func (s *session) logoff(ctx context.Context) error {
 
 	req.CreditCharge = 1
 
-	_, err := s.sendRecv(SMB2_LOGOFF, req, ctx)
+	_, err := s.sendRecv(Smb2Logoff, req, ctx)
 	if err != nil {
 		return err
 	}
@@ -311,7 +311,7 @@ func (s *session) recv(rr *requestResponse) (pkt []byte, err error) {
 func (s *session) sign(pkt []byte) []byte {
 	p := PacketCodec(pkt)
 
-	p.SetFlags(p.Flags() | SMB2_FLAGS_SIGNED)
+	p.SetFlags(p.Flags() | Smb2FlagsSigned)
 
 	h := s.signer
 

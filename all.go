@@ -38,11 +38,11 @@ import (
 )
 
 // MkdirAll mimics os.MkdirAll
-func (fs *Share) MkdirAll(path string, perm os.FileMode) error {
+func (s *Share) MkdirAll(path string, perm os.FileMode) error {
 	path = normPath(path)
 
 	// Fast path: if we can tell whether path is a directory or file, stop with success or error.
-	dir, err := fs.Stat(path)
+	dir, err := s.Stat(path)
 	if err == nil {
 		if dir.IsDir() {
 			return nil
@@ -63,18 +63,18 @@ func (fs *Share) MkdirAll(path string, perm os.FileMode) error {
 
 	if j > 1 {
 		// Create parent
-		err = fs.MkdirAll(path[0:j-1], perm)
+		err = s.MkdirAll(path[0:j-1], perm)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Parent now exists; invoke Mkdir and use its result.
-	err = fs.Mkdir(path, perm)
+	err = s.Mkdir(path, perm)
 	if err != nil {
 		// Handle arguments like "foo/." by
 		// double-checking that directory doesn't exist.
-		dir, err1 := fs.Lstat(path)
+		dir, err1 := s.Lstat(path)
 		if err1 == nil && dir.IsDir() {
 			return nil
 		}
@@ -87,17 +87,17 @@ func (fs *Share) MkdirAll(path string, perm os.FileMode) error {
 // It removes everything it can but returns the first error
 // it encounters. If the path does not exist, RemoveAll
 // returns nil (no error).
-func (fs *Share) RemoveAll(path string) error {
+func (s *Share) RemoveAll(path string) error {
 	path = normPath(path)
 
 	// Simple case: if Remove works, we're done.
-	err := fs.Remove(path)
+	err := s.Remove(path)
 	if err == nil || os.IsNotExist(err) {
 		return nil
 	}
 
 	// Otherwise, is this a directory we need to recurse into?
-	dir, serr := fs.Lstat(path)
+	dir, serr := s.Lstat(path)
 	if serr != nil {
 		if serr, ok := serr.(*os.PathError); ok && (os.IsNotExist(serr.Err) || serr.Err == syscall.ENOTDIR) {
 			return nil
@@ -110,7 +110,7 @@ func (fs *Share) RemoveAll(path string) error {
 	}
 
 	// Directory.
-	fd, err := fs.Open(path)
+	fd, err := s.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// Race. It was deleted between the Lstat and Open.
@@ -125,7 +125,7 @@ func (fs *Share) RemoveAll(path string) error {
 	for {
 		names, err1 := fd.Readdirnames(100)
 		for _, name := range names {
-			err1 := fs.RemoveAll(path + string(PathSeparator) + name)
+			err1 := s.RemoveAll(path + string(PathSeparator) + name)
 			if err == nil {
 				err = err1
 			}
@@ -146,7 +146,7 @@ func (fs *Share) RemoveAll(path string) error {
 	fd.Close()
 
 	// Remove directory.
-	err1 := fs.Remove(path)
+	err1 := s.Remove(path)
 	if err1 == nil || os.IsNotExist(err1) {
 		return nil
 	}

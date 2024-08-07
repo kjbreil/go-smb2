@@ -3,40 +3,40 @@
 package smb2
 
 import (
-	"github.com/hirochachacha/go-smb2/internal/utf16le"
+	"github.com/kjbreil/go-smb2/internal/utf16le"
 )
 
 const (
-	IO_REPARSE_TAG_RESERVED_ZERO   = 0x00000000
-	IO_REPARSE_TAG_RESERVED_ONE    = 0x00000001
-	IO_REPARSE_TAG_MOUNT_POINT     = 0xA0000003
-	IO_REPARSE_TAG_HSM             = 0xC0000004
-	IO_REPARSE_TAG_HSM2            = 0x80000006
-	IO_REPARSE_TAG_DRIVER_EXTENDER = 0x80000005
-	IO_REPARSE_TAG_SIS             = 0x80000007
-	IO_REPARSE_TAG_DFS             = 0x8000000A
-	IO_REPARSE_TAG_DFSR            = 0x80000012
-	IO_REPARSE_TAG_FILTER_MANAGER  = 0x8000000B
-	IO_REPARSE_TAG_SYMLINK         = 0xA000000C
+	IoReparseTagReservedZero   = 0x00000000
+	IoReparseTagReservedOne    = 0x00000001
+	IoReparseTagMountPoint     = 0xA0000003
+	IoReparseTagHsm            = 0xC0000004
+	IoReparseTagHsm2           = 0x80000006
+	IoReparseTagDriverExtender = 0x80000005
+	IoReparseTagSis            = 0x80000007
+	IoReparseTagDfs            = 0x8000000A
+	IoReparseTagDfsr           = 0x80000012
+	IoReparseTagFilterManager  = 0x8000000B
+	IoReparseTagSymlink        = 0xA000000C
 )
 
 const (
-	FSCTL_DFS_GET_REFERRALS            = 0x00060194
-	FSCTL_PIPE_PEEK                    = 0x0011400C
-	FSCTL_PIPE_WAIT                    = 0x00110018
-	FSCTL_PIPE_TRANSCEIVE              = 0x0011C017
-	FSCTL_SRV_COPYCHUNK                = 0x001440F2
-	FSCTL_SRV_ENUMERATE_SNAPSHOTS      = 0x00144064
-	FSCTL_SRV_REQUEST_RESUME_KEY       = 0x00140078
-	FSCTL_SRV_READ_HASH                = 0x001441bb
-	FSCTL_SRV_COPYCHUNK_WRITE          = 0x001480F2
-	FSCTL_LMR_REQUEST_RESILIENCY       = 0x001401D4
-	FSCTL_QUERY_NETWORK_INTERFACE_INFO = 0x001401FC
-	FSCTL_GET_REPARSE_POINT            = 0x000900A8
-	FSCTL_SET_REPARSE_POINT            = 0x000900A4
-	FSCTL_DFS_GET_REFERRALS_EX         = 0x000601B0
-	FSCTL_FILE_LEVEL_TRIM              = 0x00098208
-	FSCTL_VALIDATE_NEGOTIATE_INFO      = 0x00140204
+	FsctlDfsGetReferrals           = 0x00060194
+	FsctlPipePeek                  = 0x0011400C
+	FsctlPipeWait                  = 0x00110018
+	FsctlPipeTransceive            = 0x0011C017
+	FsctlSrvCopychunk              = 0x001440F2
+	FsctlSrvEnumerateSnapshots     = 0x00144064
+	FsctlSrvRequestResumeKey       = 0x00140078
+	FsctlSrvReadHash               = 0x001441bb
+	FsctlSrvCopychunkWrite         = 0x001480F2
+	FsctlLmrRequestResiliency      = 0x001401D4
+	FsctlQueryNetworkInterfaceInfo = 0x001401FC
+	FsctlGetReparsePoint           = 0x000900A8
+	FsctlSetReparsePoint           = 0x000900A4
+	FsctlDfsGetReferralsEx         = 0x000601B0
+	FsctlFileLevelTrim             = 0x00098208
+	FsctlValidateNegotiateInfo     = 0x00140204
 )
 
 type SymbolicLinkReparseDataBuffer struct {
@@ -53,7 +53,7 @@ func (c *SymbolicLinkReparseDataBuffer) Encode(p []byte) {
 	slen := utf16le.EncodeString(p[20:], c.SubstituteName)
 	plen := utf16le.EncodeString(p[20+slen:], c.PrintName)
 
-	le.PutUint32(p[:4], IO_REPARSE_TAG_SYMLINK)
+	le.PutUint32(p[:4], IoReparseTagSymlink)
 	le.PutUint16(p[4:6], uint16(len(p)-8)) // ReparseDataLength
 	le.PutUint16(p[8:10], 0)               // SubstituteNameOffset
 	le.PutUint16(p[10:12], uint16(slen))   // SubstituteNameLength
@@ -69,7 +69,7 @@ func (c SymbolicLinkReparseDataBufferDecoder) IsInvalid() bool {
 		return true
 	}
 
-	if c.ReparseTag() != IO_REPARSE_TAG_SYMLINK {
+	if c.ReparseTag() != IoReparseTagSymlink {
 		return true
 	}
 
@@ -128,14 +128,14 @@ func (c SymbolicLinkReparseDataBufferDecoder) PathBuffer() []byte {
 
 func (c SymbolicLinkReparseDataBufferDecoder) SubstituteName() string {
 	off := c.SubstituteNameOffset()
-	len := c.SubstituteNameLength()
-	return utf16le.DecodeToString(c.PathBuffer()[off : off+len])
+	length := c.SubstituteNameLength()
+	return utf16le.DecodeToString(c.PathBuffer()[off : off+length])
 }
 
 func (c SymbolicLinkReparseDataBufferDecoder) PrintName() string {
 	off := c.PrintNameOffset()
-	len := c.PrintNameLength()
-	return utf16le.DecodeToString(c.PathBuffer()[off : off+len])
+	length := c.PrintNameLength()
+	return utf16le.DecodeToString(c.PathBuffer()[off : off+length])
 }
 
 type SrvRequestResumeKeyResponseDecoder []byte
@@ -212,21 +212,21 @@ func (c SrvCopychunkResponseDecoder) TotalBytesWritten() uint32 {
 }
 
 const (
-	FILE_ATTRIBUTE_ARCHIVE             = 0x20
-	FILE_ATTRIBUTE_COMPRESSED          = 0x800
-	FILE_ATTRIBUTE_DIRECTORY           = 0x10
-	FILE_ATTRIBUTE_ENCRYPTED           = 0x4000
-	FILE_ATTRIBUTE_HIDDEN              = 0x2
-	FILE_ATTRIBUTE_NORMAL              = 0x80
-	FILE_ATTRIBUTE_NOT_CONTENT_INDEXED = 0x2000
-	FILE_ATTRIBUTE_OFFLINE             = 0x1000
-	FILE_ATTRIBUTE_READONLY            = 0x1
-	FILE_ATTRIBUTE_REPARSE_POINT       = 0x400
-	FILE_ATTRIBUTE_SPARSE_FILE         = 0x200
-	FILE_ATTRIBUTE_SYSTEM              = 0x4
-	FILE_ATTRIBUTE_TEMPORARY           = 0x100
-	FILE_ATTRIBUTE_INTEGRITY_STREAM    = 0x8000
-	FILE_ATTRIBUTE_NO_SCRUB_DATA       = 0x20000
+	FileAttributeArchive           = 0x20
+	FileAttributeCompressed        = 0x800
+	FileAttributeDirectory         = 0x10
+	FileAttributeEncrypted         = 0x4000
+	FileAttributeHidden            = 0x2
+	FileAttributeNormal            = 0x80
+	FileAttributeNotContentIndexed = 0x2000
+	FileAttributeOffline           = 0x1000
+	FileAttributeReadonly          = 0x1
+	FileAttributeReparsePoint      = 0x400
+	FileAttributeSparseFile        = 0x200
+	FileAttributeSystem            = 0x4
+	FileAttributeTemporary         = 0x100
+	FileAttributeIntegrityStream   = 0x8000
+	FileAttributeNoScrubData       = 0x20000
 )
 
 const (

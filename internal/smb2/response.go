@@ -1,6 +1,6 @@
 package smb2
 
-import "github.com/hirochachacha/go-smb2/internal/utf16le"
+import "github.com/kjbreil/go-smb2/internal/utf16le"
 
 // ----------------------------------------------------------------------------
 // SMB2 Error Response
@@ -192,7 +192,7 @@ func (c *SymbolicLinkErrorResponse) Encode(p []byte) {
 
 	le.PutUint32(p[:4], uint32(len(p)-4)) // SymLinkLength
 	le.PutUint32(p[4:8], 0x4c4d5953)
-	le.PutUint32(p[8:12], IO_REPARSE_TAG_SYMLINK)
+	le.PutUint32(p[8:12], IoReparseTagSymlink)
 	le.PutUint16(p[14:16], c.UnparsedPathLength)
 	le.PutUint32(p[24:28], c.Flags)
 	le.PutUint16(p[12:14], uint16(len(p)-12)) // ReparseDataLength
@@ -213,7 +213,7 @@ func (r SymbolicLinkErrorResponseDecoder) IsInvalid() bool {
 		return true
 	}
 
-	if r.ReparseTag() != IO_REPARSE_TAG_SYMLINK {
+	if r.ReparseTag() != IoReparseTagSymlink {
 		return true
 	}
 
@@ -351,7 +351,7 @@ func (c *NegotiateResponse) Size() int {
 }
 
 func (c *NegotiateResponse) Encode(pkt []byte) {
-	c.Command = SMB2_NEGOTIATE
+	c.Command = Smb2Negotiate
 	c.encodeHeader(pkt)
 
 	res := pkt[64:]
@@ -524,7 +524,7 @@ func (c *SessionSetupResponse) Size() int {
 }
 
 func (c *SessionSetupResponse) Encode(pkt []byte) {
-	c.Command = SMB2_SESSION_SETUP
+	c.Command = Smb2SessionSetup
 	c.encodeHeader(pkt)
 
 	res := pkt[64:]
@@ -605,7 +605,7 @@ func (c *LogoffResponse) Size() int {
 }
 
 func (c *LogoffResponse) Encode(pkt []byte) {
-	c.Command = SMB2_LOGOFF
+	c.Command = Smb2Logoff
 	c.encodeHeader(pkt)
 
 	res := pkt[64:]
@@ -652,7 +652,7 @@ func (c *TreeConnectResponse) Size() int {
 }
 
 func (c *TreeConnectResponse) Encode(pkt []byte) {
-	c.Command = SMB2_TREE_CONNECT
+	c.Command = Smb2TreeConnect
 	c.encodeHeader(pkt)
 
 	res := pkt[64:]
@@ -714,7 +714,7 @@ func (c *TreeDisconnectResponse) Size() int {
 }
 
 func (c *TreeDisconnectResponse) Encode(pkt []byte) {
-	c.Command = SMB2_TREE_DISCONNECT
+	c.Command = Smb2TreeDisconnect
 	c.encodeHeader(pkt)
 
 	res := pkt[64:]
@@ -781,7 +781,7 @@ func (c *CreateResponse) Size() int {
 }
 
 func (c *CreateResponse) Encode(pkt []byte) {
-	c.Command = SMB2_CREATE
+	c.Command = Smb2Create
 	c.encodeHeader(pkt)
 
 	res := pkt[64:]
@@ -944,7 +944,7 @@ func (c *CloseResponse) Size() int {
 }
 
 func (c *CloseResponse) Encode(pkt []byte) {
-	c.Command = SMB2_CLOSE
+	c.Command = Smb2Close
 	c.encodeHeader(pkt)
 
 	res := pkt[64:]
@@ -1026,7 +1026,7 @@ func (c *FlushResponse) Size() int {
 }
 
 func (c *FlushResponse) Encode(pkt []byte) {
-	c.Command = SMB2_FLUSH
+	c.Command = Smb2Flush
 	c.encodeHeader(pkt)
 
 	res := pkt[64:]
@@ -1074,7 +1074,7 @@ func (c *ReadResponse) Size() int {
 }
 
 func (c *ReadResponse) Encode(pkt []byte) {
-	c.Command = SMB2_READ
+	c.Command = Smb2Read
 	c.encodeHeader(pkt)
 
 	res := pkt[64:]
@@ -1153,7 +1153,7 @@ func (c *WriteResponse) Size() int {
 }
 
 func (c *WriteResponse) Encode(pkt []byte) {
-	c.Command = SMB2_WRITE
+	c.Command = Smb2Write
 	c.encodeHeader(pkt)
 
 	res := pkt[64:]
@@ -1234,7 +1234,7 @@ func (c *IoctlResponse) Size() int {
 }
 
 func (c *IoctlResponse) Encode(pkt []byte) {
-	c.Command = SMB2_IOCTL
+	c.Command = Smb2Ioctl
 	c.encodeHeader(pkt)
 
 	res := pkt[64:]
@@ -1362,7 +1362,7 @@ func (c *QueryDirectoryResponse) Size() int {
 }
 
 func (c *QueryDirectoryResponse) Encode(pkt []byte) {
-	c.Command = SMB2_QUERY_DIRECTORY
+	c.Command = Smb2QueryDirectory
 	c.encodeHeader(pkt)
 
 	res := pkt[64:]
@@ -1447,7 +1447,7 @@ func (c *QueryInfoResponse) Size() int {
 }
 
 func (c *QueryInfoResponse) Encode(pkt []byte) {
-	c.Command = SMB2_QUERY_INFO
+	c.Command = Smb2QueryInfo
 	c.encodeHeader(pkt)
 
 	res := pkt[64:]
@@ -1502,8 +1502,8 @@ func (r QueryInfoResponseDecoder) OutputBuffer() []byte {
 		return nil
 	}
 	off -= 64
-	len := r.OutputBufferLength()
-	return r[off : uint32(off)+len]
+	length := r.OutputBufferLength()
+	return r[off : uint32(off)+length]
 }
 
 // ----------------------------------------------------------------------------
@@ -1523,7 +1523,7 @@ func (c *SetInfoResponse) Size() int {
 }
 
 func (c *SetInfoResponse) Encode(pkt []byte) {
-	c.Command = SMB2_SET_INFO
+	c.Command = Smb2SetInfo
 	c.encodeHeader(pkt)
 
 	res := pkt[64:]

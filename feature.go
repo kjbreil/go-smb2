@@ -1,13 +1,13 @@
 package smb2
 
 import (
-	. "github.com/hirochachacha/go-smb2/internal/smb2"
+	. "github.com/kjbreil/go-smb2/internal/smb2"
 )
 
 // client
 
 const (
-	clientCapabilities = SMB2_GLOBAL_CAP_LARGE_MTU | SMB2_GLOBAL_CAP_ENCRYPTION
+	clientCapabilities = Smb2GlobalCapLargeMtu | Smb2GlobalCapEncryption
 )
 
 var (

@@ -9,7 +9,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/hirochachacha/go-smb2/internal/utf16le"
+	"github.com/kjbreil/go-smb2/internal/utf16le"
 )
 
 // NTLM v2 server
@@ -72,7 +72,7 @@ func (s *Server) Challenge(nmsg []byte) (cmsg []byte, err error) {
 
 	off := 48
 
-	if flags&NTLMSSP_NEGOTIATE_VERSION != 0 {
+	if flags&NtlmsspNegotiateVersion != 0 {
 		off += 8
 	}
 
@@ -84,7 +84,7 @@ func (s *Server) Challenge(nmsg []byte) (cmsg []byte, err error) {
 	le.PutUint32(cmsg[8:12], NtLmChallenge)
 	le.PutUint32(cmsg[20:24], flags)
 
-	if targetName != nil && flags&NTLMSSP_REQUEST_TARGET != 0 {
+	if targetName != nil && flags&NtlmsspRequestTarget != 0 {
 		len := copy(cmsg[off:], targetName)
 		le.PutUint16(cmsg[12:14], uint16(len))
 		le.PutUint16(cmsg[14:16], uint16(len))
@@ -92,12 +92,12 @@ func (s *Server) Challenge(nmsg []byte) (cmsg []byte, err error) {
 		off += len
 	}
 
-	if flags&NTLMSSP_NEGOTIATE_TARGET_INFO != 0 {
-		len := copy(cmsg[off:], []byte{0x00, 0x00, 0x00, 0x00}) // AvId: MsvAvEOL, AvLen: 0
-		le.PutUint16(cmsg[40:42], uint16(len))
-		le.PutUint16(cmsg[42:44], uint16(len))
+	if flags&NtlmsspNegotiateTargetInfo != 0 {
+		l := copy(cmsg[off:], []byte{0x00, 0x00, 0x00, 0x00}) // AvId: MsvAvEOL, AvLen: 0
+		le.PutUint16(cmsg[40:42], uint16(l))
+		le.PutUint16(cmsg[42:44], uint16(l))
 		le.PutUint32(cmsg[44:48], uint32(off))
-		off += len
+		off += l
 	}
 
 	_, err = rand.Read(cmsg[24:32])
@@ -105,7 +105,7 @@ func (s *Server) Challenge(nmsg []byte) (cmsg []byte, err error) {
 		return nil, err
 	}
 
-	if flags&NTLMSSP_NEGOTIATE_VERSION != 0 {
+	if flags&NtlmsspNegotiateVersion != 0 {
 		copy(cmsg[48:56], version)
 	}
 
@@ -216,7 +216,7 @@ func (s *Server) Authenticate(amsg []byte) (err error) {
 
 		keyExchangeKey := sessionBaseKey // if ntlm version == 2
 
-		if flags&NTLMSSP_NEGOTIATE_KEY_EXCH != 0 {
+		if flags&NtlmsspNegotiateKeyExch != 0 {
 			session.exportedSessionKey = make([]byte, 16)
 			cipher, err := rc4.NewCipher(keyExchangeKey)
 			if err != nil {
@@ -230,7 +230,7 @@ func (s *Server) Authenticate(amsg []byte) (err error) {
 		if infoMap, ok := parseAvPairs(targetInfo); ok {
 			if avFlags, ok := infoMap[MsvAvFlags]; ok && le.Uint32(avFlags)&0x02 != 0 {
 				MIC := make([]byte, 16)
-				if flags&NTLMSSP_NEGOTIATE_VERSION != 0 {
+				if flags&NtlmsspNegotiateVersion != 0 {
 					copy(MIC, amsg[72:88])
 					copy(amsg[72:88], zero[:])
 				} else {

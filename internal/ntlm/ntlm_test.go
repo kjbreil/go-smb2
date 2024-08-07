@@ -9,7 +9,7 @@ import (
 
 	"testing"
 
-	"github.com/hirochachacha/go-smb2/internal/utf16le"
+	"github.com/kjbreil/go-smb2/internal/utf16le"
 )
 
 func TestNtowfv2(t *testing.T) {
@@ -151,7 +151,7 @@ func TestSealKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ret := sealKey(NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY|NTLMSSP_NEGOTIATE_128, randomSessionKey, true)
+	ret := sealKey(NtlmsspNegotiateExtendedSessionsecurity|NtlmsspNegotiate128, randomSessionKey, true)
 
 	if !bytes.Equal(ret, clientSealKey) {
 		t.Errorf("expected %v, got %v", clientSealKey, ret)
@@ -168,7 +168,7 @@ func TestSignKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ret := signKey(NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY, randomSessionKey, true)
+	ret := signKey(NtlmsspNegotiateExtendedSessionsecurity, randomSessionKey, true)
 
 	if !bytes.Equal(ret, clientSignKey) {
 		t.Errorf("expected %v, got %v", clientSignKey, ret)
@@ -200,7 +200,7 @@ func TestSeal(t *testing.T) {
 	plainText := utf16le.EncodeStringToBytes("Plaintext")
 	ret := make([]byte, len(plainText)+16)
 	clientHandle.XORKeyStream(ret[16:], plainText)
-	mac(ret[:0], NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY|NTLMSSP_NEGOTIATE_KEY_EXCH, clientHandle, clientSignKey, seqNum, plainText)
+	mac(ret[:0], NtlmsspNegotiateExtendedSessionsecurity|NtlmsspNegotiateKeyExch, clientHandle, clientSignKey, seqNum, plainText)
 
 	if !bytes.Equal(ret[16:], data) {
 		t.Errorf("expected %v, got %v", data, ret[16:])

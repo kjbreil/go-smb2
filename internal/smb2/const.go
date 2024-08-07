@@ -13,37 +13,37 @@ const (
 
 // Command
 const (
-	SMB2_NEGOTIATE = iota
-	SMB2_SESSION_SETUP
-	SMB2_LOGOFF
-	SMB2_TREE_CONNECT
-	SMB2_TREE_DISCONNECT
-	SMB2_CREATE
-	SMB2_CLOSE
-	SMB2_FLUSH
-	SMB2_READ
-	SMB2_WRITE
-	SMB2_LOCK
-	SMB2_IOCTL
-	SMB2_CANCEL
-	SMB2_ECHO
-	SMB2_QUERY_DIRECTORY
-	SMB2_CHANGE_NOTIFY
-	SMB2_QUERY_INFO
-	SMB2_SET_INFO
-	SMB2_OPLOCK_BREAK
+	Smb2Negotiate = iota
+	Smb2SessionSetup
+	Smb2Logoff
+	Smb2TreeConnect
+	Smb2TreeDisconnect
+	Smb2Create
+	Smb2Close
+	Smb2Flush
+	Smb2Read
+	Smb2Write
+	Smb2Lock
+	Smb2Ioctl
+	Smb2Cancel
+	Smb2Echo
+	Smb2QueryDirectory
+	Smb2ChangeNotify
+	Smb2QueryInfo
+	Smb2SetInfo
+	Smb2OplockBreak
 )
 
 // Flags
 const (
-	SMB2_FLAGS_SERVER_TO_REDIR = 1 << iota
-	SMB2_FLAGS_ASYNC_COMMAND
-	SMB2_FLAGS_RELATED_OPERATIONS
-	SMB2_FLAGS_SIGNED
+	Smb2FlagsServerToRedir = 1 << iota
+	Smb2FlagsAsyncCommand
+	Smb2FlagsRelatedOperations
+	Smb2FlagsSigned
 
-	SMB2_FLAGS_PRIORITY_MASK     = 0x70
-	SMB2_FLAGS_DFS_OPERATIONS    = 0x10000000
-	SMB2_FLAGS_REPLAY_OPERATIONS = 0x20000000
+	Smb2FlagsPriorityMask     = 0x70
+	Smb2FlagsDfsOperations    = 0x10000000
+	Smb2FlagsReplayOperations = 0x20000000
 )
 
 // ----------------------------------------------------------------------------
@@ -54,7 +54,7 @@ const (
 
 // EncryptionAlgorithm
 const (
-	SMB2_ENCRYPTION_AES128_CCM = 1 << iota
+	Smb2EncryptionAes128Ccm = 1 << iota
 )
 
 // From SMB311
@@ -70,12 +70,12 @@ const (
 
 // ErrorId
 const (
-	SMB2_ERROR_ID_DEFAULT = 0x0
+	Smb2ErrorIdDefault = 0x0
 )
 
 // Flags
 const (
-	SYMLINK_FLAG_RELATIVE = 0x1
+	SymlinkFlagRelative = 0x1
 )
 
 // ----------------------------------------------------------------------------
@@ -84,19 +84,19 @@ const (
 
 // SecurityMode
 const (
-	SMB2_NEGOTIATE_SIGNING_ENABLED = 1 << iota
-	SMB2_NEGOTIATE_SIGNING_REQUIRED
+	Smb2NegotiateSigningEnabled = 1 << iota
+	Smb2NegotiateSigningRequired
 )
 
 // Capabilities
 const (
-	SMB2_GLOBAL_CAP_DFS = 1 << iota
-	SMB2_GLOBAL_CAP_LEASING
-	SMB2_GLOBAL_CAP_LARGE_MTU
-	SMB2_GLOBAL_CAP_MULTI_CHANNEL
-	SMB2_GLOBAL_CAP_PERSISTENT_HANDLES
-	SMB2_GLOBAL_CAP_DIRECTORY_LEASING
-	SMB2_GLOBAL_CAP_ENCRYPTION
+	Smb2GlobalCapDfs = 1 << iota
+	Smb2GlobalCapLeasing
+	Smb2GlobalCapLargeMtu
+	Smb2GlobalCapMultiChannel
+	Smb2GlobalCapPersistentHandles
+	Smb2GlobalCapDirectoryLeasing
+	Smb2GlobalCapEncryption
 )
 
 // Dialects
@@ -147,8 +147,8 @@ const (
 
 // ContextType
 const (
-	SMB2_PREAUTH_INTEGRITY_CAPABILITIES = 1 << iota
-	SMB2_ENCRYPTION_CAPABILITIES
+	Smb2PreauthIntegrityCapabilities = 1 << iota
+	Smb2EncryptionCapabilities
 )
 
 // HashAlgorithms
@@ -168,7 +168,7 @@ const (
 
 // Flags
 const (
-	SMB2_SESSION_FLAG_BINDING = 0x1
+	Smb2SessionFlagBinding = 0x1
 )
 
 // SecurityMode
@@ -189,9 +189,9 @@ const (
 
 // SessionFlags
 const (
-	SMB2_SESSION_FLAG_IS_GUEST = 1 << iota
-	SMB2_SESSION_FLAG_IS_NULL
-	SMB2_SESSION_FLAG_ENCRYPT_DATA
+	Smb2SessionFlagIsGuest = 1 << iota
+	Smb2SessionFlagIsNull
+	Smb2SessionFlagEncryptData
 )
 
 // ----------------------------------------------------------------------------
@@ -208,43 +208,43 @@ const (
 
 // Flags
 const (
-	SMB2_TREE_CONNECT_FLAG_CLUSTER_RECONNECT = 0x1
+	Smb2TreeConnectFlagClusterReconnect = 0x1
 )
 
 //
 
 // ShareType
 const (
-	SMB2_SHARE_TYPE_DISK = 1 + iota
-	SMB2_SHARE_TYPE_PIPE
-	SMB2_SHARE_TYPE_PRINT
+	Smb2ShareTypeDisk = 1 + iota
+	Smb2ShareTypePipe
+	Smb2ShareTypePrint
 )
 
 // ShareFlags
 const (
-	SMB2_SHAREFLAG_MANUAL_CACHING              = 0x0
-	SMB2_SHAREFLAG_AUTO_CACHING                = 0x10
-	SMB2_SHAREFLAG_VDO_CACHING                 = 0x20
-	SMB2_SHAREFLAG_NO_CACHING                  = 0x30
-	SMB2_SHAREFLAG_DFS                         = 0x1
-	SMB2_SHAREFLAG_DFS_ROOT                    = 0x2
-	SMB2_SHAREFLAG_RESTRICT_EXCLUSIVE_OPENS    = 0x100
-	SMB2_SHAREFLAG_FORCE_SHARED_DELETE         = 0x200
-	SMB2_SHAREFLAG_ALLOW_NAMESPACE_CACHING     = 0x400
-	SMB2_SHAREFLAG_ACCESS_BASED_DIRECTORY_ENUM = 0x800
-	SMB2_SHAREFLAG_FORCE_LEVELII_OPLOCK        = 0x1000
-	SMB2_SHAREFLAG_ENABLE_HASH_V1              = 0x2000
-	SMB2_SHAREFLAG_ENABLE_HASH_V2              = 0x4000
-	SMB2_SHAREFLAG_ENCRYPT_DATA                = 0x8000
+	Smb2ShareflagManualCaching            = 0x0
+	Smb2ShareflagAutoCaching              = 0x10
+	Smb2ShareflagVdoCaching               = 0x20
+	Smb2ShareflagNoCaching                = 0x30
+	Smb2ShareflagDfs                      = 0x1
+	Smb2ShareflagDfsRoot                  = 0x2
+	Smb2ShareflagRestrictExclusiveOpens   = 0x100
+	Smb2ShareflagForceSharedDelete        = 0x200
+	Smb2ShareflagAllowNamespaceCaching    = 0x400
+	Smb2ShareflagAccessBasedDirectoryEnum = 0x800
+	Smb2ShareflagForceLeveliiOplock       = 0x1000
+	Smb2ShareflagEnableHashV1             = 0x2000
+	Smb2ShareflagEnableHashV2             = 0x4000
+	Smb2ShareflagEncryptData              = 0x8000
 )
 
 // Capabilities
 const (
-	SMB2_SHARE_CAP_DFS = 0x8 << iota
-	SMB2_SHARE_CAP_CONTINUOUS_AVAILABILITY
-	SMB2_SHARE_CAP_SCALEOUT
-	SMB2_SHARE_CAP_CLUSTER
-	SMB2_SHARE_CAP_ASYMMETRIC
+	Smb2ShareCapDfs = 0x8 << iota
+	Smb2ShareCapContinuousAvailability
+	Smb2ShareCapScaleout
+	Smb2ShareCapCluster
+	Smb2ShareCapAsymmetric
 )
 
 // ----------------------------------------------------------------------------
@@ -259,11 +259,11 @@ const (
 
 // RequestedOplockLevel
 const (
-	SMB2_OPLOCK_LEVEL_NONE      = 0x0
-	SMB2_OPLOCK_LEVEL_II        = 0x1
-	SMB2_OPLOCK_LEVEL_EXCLUSIVE = 0x8
-	SMB2_OPLOCK_LEVEL_BATCH     = 0x9
-	SMB2_OPLOCK_LEVEL_LEASE     = 0xff
+	Smb2OplockLevelNone      = 0x0
+	Smb2OplockLevelIi        = 0x1
+	Smb2OplockLevelExclusive = 0x8
+	Smb2OplockLevelBatch     = 0x9
+	Smb2OplockLevelLease     = 0xff
 )
 
 // ImpersonationLevel
@@ -277,39 +277,39 @@ const (
 // DesiredAccess
 const (
 	// for file, pipe, printer
-	FILE_READ_DATA = 1 << iota
-	FILE_WRITE_DATA
-	FILE_APPEND_DATA
-	FILE_READ_EA
-	FILE_WRITE_EA
-	FILE_EXECUTE
-	FILE_DELETE_CHILD
-	FILE_READ_ATTRIBUTES
-	FILE_WRITE_ATTRIBUTES
+	FileReadData = 1 << iota
+	FileWriteData
+	FileAppendData
+	FileReadEa
+	FileWriteEa
+	FileExecute
+	FileDeleteChild
+	FileReadAttributes
+	FileWriteAttributes
 
 	// for directory
-	FILE_LIST_DIRECTORY = 1 << iota
-	FILE_ADD_FILE
-	FILE_ADD_SUBDIRECTORY
-	_ // FILE_READ_EA
-	_ // FILE_WRITE_EA
-	FILE_TRAVERSE
-	_ // FILE_DELETE_CHILD
-	_ // FILE_READ_ATTRIBUTES
-	_ // FILE_WRITE_ATTRIBUTES
+	FileListDirectory = 1 << iota
+	FileAddFile
+	FileAddSubdirectory
+	_ // FileReadEa
+	_ // FileWriteEa
+	FileTraverse
+	_ // FileDeleteChild
+	_ // FileReadAttributes
+	_ // FileWriteAttributes
 
 	// common
-	DELETE                 = 0x10000
-	READ_CONTROL           = 0x20000
-	WRITE_DAC              = 0x40000
-	WRITE_OWNER            = 0x80000
-	SYNCHRONIZE            = 0x100000
-	ACCESS_SYSTEM_SECURITY = 0x1000000
-	MAXIMUM_ALLOWED        = 0x2000000
-	GENERIC_ALL            = 0x10000000
-	GENERIC_EXECUTE        = 0x20000000
-	GENERIC_WRITE          = 0x40000000
-	GENERIC_READ           = 0x80000000
+	DELETE               = 0x10000
+	ReadControl          = 0x20000
+	WriteDac             = 0x40000
+	WriteOwner           = 0x80000
+	SYNCHRONIZE          = 0x100000
+	AccessSystemSecurity = 0x1000000
+	MaximumAllowed       = 0x2000000
+	GenericAll           = 0x10000000
+	GenericExecute       = 0x20000000
+	GenericWrite         = 0x40000000
+	GenericRead          = 0x80000000
 )
 
 // FileAttributes (from MS-FSCC)
@@ -333,47 +333,47 @@ const (
 
 // ShareAccess
 const (
-	FILE_SHARE_READ = 1 << iota
-	FILE_SHARE_WRITE
-	FILE_SHARE_DELETE
+	FileShareRead = 1 << iota
+	FileShareWrite
+	FileShareDelete
 )
 
 // CreateDisposition
 const (
-	FILE_SUPERSEDE = iota
-	FILE_OPEN
-	FILE_CREATE
-	FILE_OPEN_IF
-	FILE_OVERWRITE
-	FILE_OVERWRITE_IF
+	FileSupersede = iota
+	FileOpen
+	FileCreate
+	FileOpenIf
+	FileOverwrite
+	FileOverwriteIf
 )
 
 // CreateOptions
 const (
-	FILE_DIRECTORY_FILE = 1 << iota
-	FILE_WRITE_THROUGH
-	FILE_SEQUENTIAL_ONLY
-	FILE_NO_INTERMEDIATE_BUFFERING
-	FILE_SYNCHRONOUS_IO_ALERT
-	FILE_SYNCHRONOUS_IO_NONALERT
-	FILE_NON_DIRECTORY_FILE
+	FileDirectoryFile = 1 << iota
+	FileWriteThrough
+	FileSequentialOnly
+	FileNoIntermediateBuffering
+	FileSynchronousIoAlert
+	FileSynchronousIoNonalert
+	FileNonDirectoryFile
 	_
-	FILE_COMPLETE_IF_OPLOCKED
-	FILE_NO_EA_KNOWLEDGE
-	FILE_OPEN_REMOTE_INSTANCE
-	FILE_RANDOM_ACCESS
-	FILE_DELETE_ON_CLOSE
-	FILE_OPEN_BY_FILE_ID
-	FILE_OPEN_FOR_BACKUP_INTENT
-	FILE_NO_COMPRESSION
-	FILE_OPEN_REQUIRING_OPLOCK
-	FILE_DISALLOW_EXCLUSIVE
+	FileCompleteIfOplocked
+	FileNoEaKnowledge
+	FileOpenRemoteInstance
+	FileRandomAccess
+	FileDeleteOnClose
+	FileOpenByFileId
+	FileOpenForBackupIntent
+	FileNoCompression
+	FileOpenRequiringOplock
+	FileDisallowExclusive
 	_
 	_
-	FILE_RESERVE_OPFILTER
-	FILE_OPEN_REPARSE_POINT
-	FILE_OPEN_NO_RECALL
-	FILE_OPEN_FOR_FREE_SPACE_QUERY
+	FileReserveOpfilter
+	FileOpenReparsePoint
+	FileOpenNoRecall
+	FileOpenForFreeSpaceQuery
 )
 
 //
@@ -389,7 +389,7 @@ const (
 
 // Flags
 const (
-	SMB2_CREATE_FLAG_REPARSEPOINT = 1 << iota
+	Smb2CreateFlagReparsepoint = 1 << iota
 )
 
 // CreateAction
@@ -426,7 +426,7 @@ const (
 
 // Flags
 const (
-	SMB2_CLOSE_FLAG_POSTQUERY_ATTRIB = 1 << iota
+	Smb2CloseFlagPostqueryAttrib = 1 << iota
 )
 
 //
@@ -467,14 +467,14 @@ const (
 
 // Flags
 const (
-	SMB2_READFLAG_READ_UNBUFFERED = 1 << iota
+	Smb2ReadflagReadUnbuffered = 1 << iota
 )
 
 // Channel
 const (
-	SMB2_CHANNEL_NONE = iota
-	SMB2_CHANNEL_RDMA_V1
-	SMB2_CHANNEL_RDMA_V1_INVALIDATE
+	Smb2ChannelNone = iota
+	Smb2ChannelRdmaV1
+	Smb2ChannelRdmaV1Invalidate
 )
 
 //
@@ -492,8 +492,8 @@ const (
 
 // Flags
 const (
-	SMB2_WRITEFLAG_WRITE_THROUGH = 1 << iota
-	SMB2_WRITEFLAG_WRITE_UNBUFFERED
+	Smb2WriteflagWriteThrough = 1 << iota
+	Smb2WriteflagWriteUnbuffered
 )
 
 //
@@ -548,7 +548,7 @@ const (
 
 // Flags
 const (
-	SMB2_0_IOCTL_IS_FSCTL = 0x1
+	Smb20IoctlIsFsctl = 0x1
 )
 
 //
@@ -588,9 +588,9 @@ const (
 
 // Flags
 const (
-	RESTART_SCANS = 1 << iota
-	RETURN_SINGLE_ENTRY
-	INDEX_SPECIFIED
+	RestartScans = 1 << iota
+	ReturnSingleEntry
+	IndexSpecified
 	_
 	REOPEN
 )
@@ -609,10 +609,10 @@ const (
 
 // InfoType
 const (
-	INFO_FILE = 1 + iota
-	INFO_FILESYSTEM
-	INFO_SECURITY
-	INFO_QUOTA
+	InfoFile = 1 + iota
+	InfoFilesystem
+	InfoSecurity
+	InfoQuota
 )
 
 // FileInfoClass (from MS-FSCC)
@@ -648,22 +648,22 @@ const (
 
 // AdditionalInformation
 const (
-	OWNER_SECURITY_INFORMATION = 1 << iota
-	GROUP_SECUIRTY_INFORMATION
-	DACL_SECUIRTY_INFORMATION
-	SACL_SECUIRTY_INFORMATION
-	LABEL_SECUIRTY_INFORMATION
-	ATTRIBUTE_SECUIRTY_INFORMATION
-	SCOPE_SECUIRTY_INFORMATION
+	OwnerSecurityInformation = 1 << iota
+	GroupSecuirtyInformation
+	DaclSecuirtyInformation
+	SaclSecuirtyInformation
+	LabelSecuirtyInformation
+	AttributeSecuirtyInformation
+	ScopeSecuirtyInformation
 
-	BACKUP_SECUIRTY_INFORMATION = 0x10000
+	BackupSecuirtyInformation = 0x10000
 )
 
 // Flags
 const (
-	SL_RESTART_SCAN = 1 << iota
-	SL_RETURN_SINGLE_ENTRY
-	SL_INDEX_SPECIFIED
+	SlRestartScan = 1 << iota
+	SlReturnSingleEntry
+	SlIndexSpecified
 )
 
 //
@@ -674,10 +674,10 @@ const (
 
 // InfoType
 const (
-	SMB2_0_INFO_FILE = 1 + iota
-	SMB2_0_INFO_FILESYSTEM
-	SMB2_0_INFO_SECURITY
-	SMB2_0_INFO_QUOTA
+	Smb20InfoFile = 1 + iota
+	Smb20InfoFilesystem
+	Smb20InfoSecurity
+	Smb20InfoQuota
 )
 
 // FileInfoClass

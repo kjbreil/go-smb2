@@ -39,7 +39,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	. "github.com/hirochachacha/go-smb2/internal/erref"
+	. "github.com/kjbreil/go-smb2/internal/erref"
 )
 
 // ErrBadPattern indicates a pattern was malformed.
@@ -235,7 +235,7 @@ func getEsc(chunk string) (r rune, nchunk string, err error) {
 }
 
 // Glob should work like filepath.Glob.
-func (fs *Share) Glob(pattern string) (matches []string, err error) {
+func (s *Share) Glob(pattern string) (matches []string, err error) {
 	pattern = normPattern(pattern)
 
 	// Check pattern is well-formed.
@@ -244,7 +244,7 @@ func (fs *Share) Glob(pattern string) (matches []string, err error) {
 	}
 
 	if !hasMeta(pattern) {
-		if _, err = fs.Lstat(pattern); err != nil {
+		if _, err = s.Lstat(pattern); err != nil {
 			return nil, nil
 		}
 		return []string{pattern}, nil
@@ -255,7 +255,7 @@ func (fs *Share) Glob(pattern string) (matches []string, err error) {
 	dir = cleanGlobPath(dir)
 
 	if !hasMeta(dir) {
-		return fs.glob(dir, file, nil)
+		return s.glob(dir, file, nil)
 	}
 
 	// Prevent infinite recursion. See issue 15879.
@@ -264,12 +264,12 @@ func (fs *Share) Glob(pattern string) (matches []string, err error) {
 	}
 
 	var m []string
-	m, err = fs.Glob(dir)
+	m, err = s.Glob(dir)
 	if err != nil {
 		return
 	}
 	for _, d := range m {
-		matches, err = fs.glob(d, file, matches)
+		matches, err = s.glob(d, file, matches)
 		if err != nil {
 			return
 		}
@@ -300,16 +300,16 @@ func simplifyPattern(pattern string) string {
 // and appends them to matches. If the directory cannot be
 // opened, it returns the existing matches. New matches are
 // added in lexicographical order.
-func (fs *Share) glob(dir, pattern string, matches []string) (m []string, e error) {
+func (s *Share) glob(dir, pattern string, matches []string) (m []string, e error) {
 	m = matches
-	fi, err := fs.Stat(dir)
+	fi, err := s.Stat(dir)
 	if err != nil {
 		return // ignore I/O error
 	}
 	if !fi.IsDir() {
 		return // ignore I/O error
 	}
-	d, err := fs.Open(dir)
+	d, err := s.Open(dir)
 	if err != nil {
 		return // ignore I/O error
 	}
@@ -326,9 +326,9 @@ L:
 		if err != nil {
 			if err, ok := err.(*ResponseError); ok {
 				switch NtStatus(err.Code) {
-				case STATUS_NO_SUCH_FILE:
+				case StatusNoSuchFile:
 					return []string{}, nil
-				case STATUS_NO_MORE_FILES:
+				case StatusNoMoreFiles:
 					break L
 				}
 			}

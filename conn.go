@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	. "github.com/hirochachacha/go-smb2/internal/erref"
-	. "github.com/hirochachacha/go-smb2/internal/smb2"
+	. "github.com/kjbreil/go-smb2/internal/erref"
+	. "github.com/kjbreil/go-smb2/internal/smb2"
 )
 
 // Negotiator contains options for func (*Dialer) Dial.
@@ -25,9 +25,9 @@ func (n *Negotiator) makeRequest() (*NegotiateRequest, error) {
 	req := new(NegotiateRequest)
 
 	if n.RequireMessageSigning {
-		req.SecurityMode = SMB2_NEGOTIATE_SIGNING_REQUIRED
+		req.SecurityMode = Smb2NegotiateSigningRequired
 	} else {
-		req.SecurityMode = SMB2_NEGOTIATE_SIGNING_ENABLED
+		req.SecurityMode = Smb2NegotiateSigningEnabled
 	}
 
 	req.Capabilities = clientCapabilities
@@ -119,7 +119,7 @@ retry:
 		return nil, err
 	}
 
-	res, err := accept(SMB2_NEGOTIATE, pkt)
+	res, err := accept(Smb2Negotiate, pkt)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ retry:
 		return nil, &InvalidResponseError{"unexpected dialect returned"}
 	}
 
-	conn.requireSigning = n.RequireMessageSigning || r.SecurityMode()&SMB2_NEGOTIATE_SIGNING_REQUIRED != 0
+	conn.requireSigning = n.RequireMessageSigning || r.SecurityMode()&Smb2NegotiateSigningRequired != 0
 	conn.capabilities = clientCapabilities & r.Capabilities()
 	conn.dialect = r.DialectRevision()
 	conn.maxTransactSize = r.MaxTransactSize()
@@ -164,7 +164,7 @@ retry:
 		}
 
 		switch ctx.ContextType() {
-		case SMB2_PREAUTH_INTEGRITY_CAPABILITIES:
+		case Smb2PreauthIntegrityCapabilities:
 			d := HashContextDataDecoder(ctx.Data())
 			if d.IsInvalid() {
 				return nil, &InvalidResponseError{"broken hash context data format"}
@@ -192,7 +192,7 @@ retry:
 			default:
 				return nil, &InvalidResponseError{"unknown hash algorithm"}
 			}
-		case SMB2_ENCRYPTION_CAPABILITIES:
+		case Smb2EncryptionCapabilities:
 			d := CipherContextDataDecoder(ctx.Data())
 			if d.IsInvalid() {
 				return nil, &InvalidResponseError{"broken cipher context data format"}
@@ -341,7 +341,7 @@ func (conn *conn) sendRecv(cmd uint16, req Packet, ctx context.Context) (res []b
 }
 
 func (conn *conn) loanCredit(payloadSize int, ctx context.Context) (creditCharge uint16, grantedPayloadSize int, err error) {
-	if conn.capabilities&SMB2_GLOBAL_CAP_LARGE_MTU == 0 {
+	if conn.capabilities&Smb2GlobalCapLargeMtu == 0 {
 		creditCharge = 1
 	} else {
 		creditCharge = uint16((payloadSize-1)/(64*1024) + 1)
@@ -445,13 +445,13 @@ func (conn *conn) makeRequestResponse(req Packet, tc *treeConn, ctx context.Cont
 
 	if s != nil {
 		if _, ok := req.(*SessionSetupRequest); !ok {
-			if s.sessionFlags&SMB2_SESSION_FLAG_ENCRYPT_DATA != 0 || (tc != nil && tc.shareFlags&SMB2_SHAREFLAG_ENCRYPT_DATA != 0) {
+			if s.sessionFlags&Smb2SessionFlagEncryptData != 0 || (tc != nil && tc.shareFlags&Smb2ShareflagEncryptData != 0) {
 				pkt, err = s.encrypt(pkt)
 				if err != nil {
 					return nil, &InternalError{err.Error()}
 				}
 			} else {
-				if s.sessionFlags&(SMB2_SESSION_FLAG_IS_GUEST|SMB2_SESSION_FLAG_IS_NULL) == 0 {
+				if s.sessionFlags&(Smb2SessionFlagIsGuest|Smb2SessionFlagIsNull) == 0 {
 					pkt = s.sign(pkt)
 				}
 			}
@@ -603,37 +603,37 @@ func accept(cmd uint16, pkt []byte) (res []byte, err error) {
 	status := NtStatus(p.Status())
 
 	switch status {
-	case STATUS_SUCCESS:
+	case StatusSuccess:
 		return p.Data(), nil
-	case STATUS_OBJECT_NAME_COLLISION:
+	case StatusObjectNameCollision:
 		return nil, os.ErrExist
-	case STATUS_OBJECT_NAME_NOT_FOUND, STATUS_OBJECT_PATH_NOT_FOUND:
+	case StatusObjectNameNotFound, StatusObjectPathNotFound:
 		return nil, os.ErrNotExist
-	case STATUS_ACCESS_DENIED, STATUS_CANNOT_DELETE:
+	case StatusAccessDenied, StatusCannotDelete:
 		return nil, os.ErrPermission
 	}
 
 	switch cmd {
-	case SMB2_SESSION_SETUP:
-		if status == STATUS_MORE_PROCESSING_REQUIRED {
+	case Smb2SessionSetup:
+		if status == StatusMoreProcessingRequired {
 			return p.Data(), nil
 		}
-	case SMB2_QUERY_INFO:
-		if status == STATUS_BUFFER_OVERFLOW {
+	case Smb2QueryInfo:
+		if status == StatusBufferOverflow {
 			return nil, &ResponseError{Code: uint32(status)}
 		}
-	case SMB2_IOCTL:
-		if status == STATUS_BUFFER_OVERFLOW {
+	case Smb2Ioctl:
+		if status == StatusBufferOverflow {
 			if !IoctlResponseDecoder(p.Data()).IsInvalid() {
 				return p.Data(), &ResponseError{Code: uint32(status)}
 			}
 		}
-	case SMB2_READ:
-		if status == STATUS_BUFFER_OVERFLOW {
+	case Smb2Read:
+		if status == StatusBufferOverflow {
 			return nil, &ResponseError{Code: uint32(status)}
 		}
-	case SMB2_CHANGE_NOTIFY:
-		if status == STATUS_NOTIFY_ENUM_DIR {
+	case Smb2ChangeNotify:
+		if status == StatusNotifyEnumDir {
 			return nil, &ResponseError{Code: uint32(status)}
 		}
 	}
@@ -705,7 +705,7 @@ func (conn *conn) tryVerify(pkt []byte, isEncrypted bool) error {
 	msgId := p.MessageId()
 
 	if msgId != 0xFFFFFFFFFFFFFFFF {
-		if p.Flags()&SMB2_FLAGS_SIGNED != 0 {
+		if p.Flags()&Smb2FlagsSigned != 0 {
 			if conn.session == nil || conn.session.sessionId != p.SessionId() {
 				return &InvalidResponseError{"unknown session id returned"}
 			} else {
@@ -716,7 +716,7 @@ func (conn *conn) tryVerify(pkt []byte, isEncrypted bool) error {
 		} else {
 			if conn.requireSigning && !isEncrypted {
 				if conn.session != nil {
-					if conn.session.sessionFlags&(SMB2_SESSION_FLAG_IS_GUEST|SMB2_SESSION_FLAG_IS_NULL) == 0 {
+					if conn.session.sessionFlags&(Smb2SessionFlagIsGuest|Smb2SessionFlagIsNull) == 0 {
 						if conn.session.sessionId == p.SessionId() {
 							return &InvalidResponseError{"signing required"}
 						}
@@ -742,7 +742,7 @@ func (conn *conn) tryHandle(pkt []byte, e error) error {
 		rr.err = e
 
 		close(rr.recv)
-	case NtStatus(p.Status()) == STATUS_PENDING:
+	case NtStatus(p.Status()) == StatusPending:
 		rr.asyncId = p.AsyncId()
 		conn.account.charge(p.CreditResponse(), rr.creditRequest)
 		conn.outstandingRequests.set(msgId, rr)

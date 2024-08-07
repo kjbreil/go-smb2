@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hirochachacha/go-smb2"
+	"github.com/kjbreil/go-smb2"
 
 	"testing"
 )
@@ -70,18 +70,18 @@ func connect(f func()) {
 		cf, err := os.Open("client_conf.json")
 		if err != nil {
 			fmt.Println("cannot open client_conf.json")
-			goto NO_CONNECTION
+			goto NoConnection
 		}
 
 		err = json.NewDecoder(cf).Decode(&cfg)
 		if err != nil {
 			fmt.Println("cannot decode client_conf.json")
-			goto NO_CONNECTION
+			goto NoConnection
 		}
 
 		if cfg.Transport.Type != "tcp" {
 			fmt.Println("unsupported transport type")
-			goto NO_CONNECTION
+			goto NoConnection
 		}
 
 		conn, err := net.Dial(cfg.Transport.Type, fmt.Sprintf("%s:%d", cfg.Transport.Host, cfg.Transport.Port))
@@ -131,7 +131,7 @@ func connect(f func()) {
 		rfs = fs2
 		session = c
 	}
-NO_CONNECTION:
+NoConnection:
 	f()
 }
 

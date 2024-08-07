@@ -14,12 +14,12 @@ import (
 var zero [16]byte
 
 var version = []byte{
-	0: WINDOWS_MAJOR_VERSION_10,
-	1: WINDOWS_MINOR_VERSION_0,
-	7: NTLMSSP_REVISION_W2K3,
+	0: WindowsMajorVersion10,
+	1: WindowsMinorVersion0,
+	7: NtlmsspRevisionW2k3,
 }
 
-const defaultFlags = NTLMSSP_NEGOTIATE_56 | NTLMSSP_NEGOTIATE_KEY_EXCH | NTLMSSP_NEGOTIATE_128 | NTLMSSP_NEGOTIATE_TARGET_INFO | NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY | NTLMSSP_NEGOTIATE_ALWAYS_SIGN | NTLMSSP_NEGOTIATE_NTLM | NTLMSSP_NEGOTIATE_SIGN | NTLMSSP_REQUEST_TARGET | NTLMSSP_NEGOTIATE_UNICODE | NTLMSSP_NEGOTIATE_VERSION
+const defaultFlags = NtlmsspNegotiate56 | NtlmsspNegotiateKeyExch | NtlmsspNegotiate128 | NtlmsspNegotiateTargetInfo | NtlmsspNegotiateExtendedSessionsecurity | NtlmsspNegotiateAlwaysSign | NtlmsspNegotiateNtlm | NtlmsspNegotiateSign | NtlmsspRequestTarget | NtlmsspNegotiateUnicode | NtlmsspNegotiateVersion
 
 var le = binary.LittleEndian
 
@@ -30,38 +30,38 @@ const (
 )
 
 const (
-	NTLMSSP_NEGOTIATE_UNICODE = 1 << iota
-	NTLM_NEGOTIATE_OEM
-	NTLMSSP_REQUEST_TARGET
+	NtlmsspNegotiateUnicode = 1 << iota
+	NtlmNegotiateOem
+	NtlmsspRequestTarget
 	_
-	NTLMSSP_NEGOTIATE_SIGN
-	NTLMSSP_NEGOTIATE_SEAL
-	NTLMSSP_NEGOTIATE_DATAGRAM
-	NTLMSSP_NEGOTIATE_LM_KEY
+	NtlmsspNegotiateSign
+	NtlmsspNegotiateSeal
+	NtlmsspNegotiateDatagram
+	NtlmsspNegotiateLmKey
 	_
-	NTLMSSP_NEGOTIATE_NTLM
+	NtlmsspNegotiateNtlm
 	_
-	NTLMSSP_ANONYMOUS
-	NTLMSSP_NEGOTIATE_OEM_DOMAIN_SUPPLIED
-	NTLMSSP_NEGOTIATE_OEM_WORKSTATION_SUPPLIED
+	NtlmsspAnonymous
+	NtlmsspNegotiateOemDomainSupplied
+	NtlmsspNegotiateOemWorkstationSupplied
 	_
-	NTLMSSP_NEGOTIATE_ALWAYS_SIGN
-	NTLMSSP_TARGET_TYPE_DOMAIN
-	NTLMSSP_TARGET_TYPE_SERVER
+	NtlmsspNegotiateAlwaysSign
+	NtlmsspTargetTypeDomain
+	NtlmsspTargetTypeServer
 	_
-	NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY
-	NTLMSSP_NEGOTIATE_IDENTIFY
+	NtlmsspNegotiateExtendedSessionsecurity
+	NtlmsspNegotiateIdentify
 	_
-	NTLMSSP_REQUEST_NON_NT_SESSION_KEY
-	NTLMSSP_NEGOTIATE_TARGET_INFO
+	NtlmsspRequestNonNtSessionKey
+	NtlmsspNegotiateTargetInfo
 	_
-	NTLMSSP_NEGOTIATE_VERSION
+	NtlmsspNegotiateVersion
 	_
 	_
 	_
-	NTLMSSP_NEGOTIATE_128
-	NTLMSSP_NEGOTIATE_KEY_EXCH
-	NTLMSSP_NEGOTIATE_56
+	NtlmsspNegotiate128
+	NtlmsspNegotiateKeyExch
+	NtlmsspNegotiate56
 )
 
 const (
@@ -100,27 +100,26 @@ var signature = []byte("NTLMSSP\x00")
 // 7-8: NTLMRevisionCurrent
 
 const (
-	WINDOWS_MAJOR_VERSION_5  = 0x05
-	WINDOWS_MAJOR_VERSION_6  = 0x06
-	WINDOWS_MAJOR_VERSION_10 = 0x0a
+	WindowsMajorVersion5  = 0x05
+	WindowsMajorVersion6  = 0x06
+	WindowsMajorVersion10 = 0x0a
 )
 
 const (
-	WINDOWS_MINOR_VERSION_0 = 0x00
-	WINDOWS_MINOR_VERSION_1 = 0x01
-	WINDOWS_MINOR_VERSION_2 = 0x02
-	WINDOWS_MINOR_VERSION_3 = 0x03
+	WindowsMinorVersion0 = 0x00
+	WindowsMinorVersion1 = 0x01
+	WindowsMinorVersion2 = 0x02
+	WindowsMinorVersion3 = 0x03
 )
 
 const (
-	NTLMSSP_REVISION_W2K3 = 0x0f
+	NtlmsspRevisionW2k3 = 0x0f
 )
 
 func ntowfv2(USER, password, domain []byte) []byte {
 	h := md4.New()
 	h.Write(password)
-	hash := h.Sum(nil)
-	return ntowfv2Hash(USER, hash, domain)
+	return ntowfv2Hash(USER, h.Sum(nil), domain)
 }
 
 func ntowfv2Hash(USER, hash, domain []byte) []byte {
@@ -241,7 +240,7 @@ func (i *targetInfoEncoder) encode(dst []byte) {
 
 func mac(dst []byte, negotiateFlags uint32, handle *rc4.Cipher, signingKey []byte, seqNum uint32, msg []byte) ([]byte, uint32) {
 	ret, tag := sliceForAppend(dst, 16)
-	if negotiateFlags&NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY == 0 {
+	if negotiateFlags&NtlmsspNegotiateExtendedSessionsecurity == 0 {
 		//        NtlmsspMessageSignature
 		//   0-4: Version
 		//   4-8: RandomPad
@@ -257,7 +256,7 @@ func mac(dst []byte, negotiateFlags uint32, handle *rc4.Cipher, signingKey []byt
 		tag[13] ^= byte(seqNum >> 8)
 		tag[14] ^= byte(seqNum >> 16)
 		tag[15] ^= byte(seqNum >> 24)
-		if negotiateFlags&NTLMSSP_NEGOTIATE_DATAGRAM == 0 {
+		if negotiateFlags&NtlmsspNegotiateDatagram == 0 {
 			seqNum++
 		}
 		tag[4] = 0
@@ -276,7 +275,7 @@ func mac(dst []byte, negotiateFlags uint32, handle *rc4.Cipher, signingKey []byt
 		h.Write(tag[12:16])
 		h.Write(msg)
 		copy(tag[4:12], h.Sum(nil))
-		if negotiateFlags&NTLMSSP_NEGOTIATE_KEY_EXCH != 0 {
+		if negotiateFlags&NtlmsspNegotiateKeyExch != 0 {
 			handle.XORKeyStream(tag[4:12], tag[4:12])
 		}
 		seqNum++
@@ -286,7 +285,7 @@ func mac(dst []byte, negotiateFlags uint32, handle *rc4.Cipher, signingKey []byt
 }
 
 func signKey(negotiateFlags uint32, randomSessionKey []byte, fromClient bool) []byte {
-	if negotiateFlags&NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY != 0 {
+	if negotiateFlags&NtlmsspNegotiateExtendedSessionsecurity != 0 {
 		h := md5.New()
 		h.Write(randomSessionKey)
 		if fromClient {
@@ -300,12 +299,12 @@ func signKey(negotiateFlags uint32, randomSessionKey []byte, fromClient bool) []
 }
 
 func sealKey(negotiateFlags uint32, randomSessionKey []byte, fromClient bool) []byte {
-	if negotiateFlags&NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY != 0 {
+	if negotiateFlags&NtlmsspNegotiateExtendedSessionsecurity != 0 {
 		h := md5.New()
 		switch {
-		case negotiateFlags&NTLMSSP_NEGOTIATE_128 != 0:
+		case negotiateFlags&NtlmsspNegotiate128 != 0:
 			h.Write(randomSessionKey)
-		case negotiateFlags&NTLMSSP_NEGOTIATE_56 != 0:
+		case negotiateFlags&NtlmsspNegotiate56 != 0:
 			h.Write(randomSessionKey[:7])
 		default:
 			h.Write(randomSessionKey[:5])
@@ -318,9 +317,9 @@ func sealKey(negotiateFlags uint32, randomSessionKey []byte, fromClient bool) []
 		return h.Sum(nil)
 	}
 
-	if negotiateFlags&NTLMSSP_NEGOTIATE_LM_KEY != 0 {
+	if negotiateFlags&NtlmsspNegotiateLmKey != 0 {
 		sealingKey := make([]byte, 8)
-		if negotiateFlags&NTLMSSP_NEGOTIATE_56 != 0 {
+		if negotiateFlags&NtlmsspNegotiate56 != 0 {
 			copy(sealingKey, randomSessionKey[:7])
 			sealingKey[7] = 0xa0
 		} else {

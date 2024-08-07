@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hirochachacha/go-smb2/internal/utf16le"
+	"github.com/kjbreil/go-smb2/internal/utf16le"
 )
 
-// NTLM v2 client
+// Client represents an NTLM v2 client
 type Client struct {
 	User        string
 	Password    string
@@ -80,7 +80,7 @@ func (c *Client) Authenticate(cmsg []byte) (amsg []byte, err error) {
 
 	flags := le.Uint32(c.nmsg[12:16]) & le.Uint32(cmsg[20:24])
 
-	if flags&NTLMSSP_REQUEST_TARGET == 0 {
+	if flags&NtlmsspRequestTarget == 0 {
 		return nil, errors.New("invalid negotiate flags")
 	}
 
@@ -95,7 +95,7 @@ func (c *Client) Authenticate(cmsg []byte) (amsg []byte, err error) {
 	}
 	targetName := cmsg[targetNameBufferOffset : targetNameBufferOffset+uint32(targetNameLen)] // cmsg.TargetName
 
-	if flags&NTLMSSP_NEGOTIATE_TARGET_INFO == 0 {
+	if flags&NtlmsspNegotiateTargetInfo == 0 {
 		return nil, errors.New("invalid negotiate flags")
 	}
 
@@ -156,27 +156,27 @@ func (c *Client) Authenticate(cmsg []byte) (amsg []byte, err error) {
 	le.PutUint32(amsg[8:12], NtLmAuthenticate)
 
 	if domain != nil {
-		len := copy(amsg[off:], domain)
-		le.PutUint16(amsg[28:30], uint16(len))
-		le.PutUint16(amsg[30:32], uint16(len))
+		l := copy(amsg[off:], domain)
+		le.PutUint16(amsg[28:30], uint16(l))
+		le.PutUint16(amsg[30:32], uint16(l))
 		le.PutUint32(amsg[32:36], uint32(off))
-		off += len
+		off += l
 	}
 
 	if user != nil {
-		len := copy(amsg[off:], user)
-		le.PutUint16(amsg[36:38], uint16(len))
-		le.PutUint16(amsg[38:40], uint16(len))
+		l := copy(amsg[off:], user)
+		le.PutUint16(amsg[36:38], uint16(l))
+		le.PutUint16(amsg[38:40], uint16(l))
 		le.PutUint32(amsg[40:44], uint32(off))
-		off += len
+		off += l
 	}
 
 	if workstation != nil {
-		len := copy(amsg[off:], workstation)
-		le.PutUint16(amsg[44:46], uint16(len))
-		le.PutUint16(amsg[46:48], uint16(len))
+		l := copy(amsg[off:], workstation)
+		le.PutUint16(amsg[44:46], uint16(l))
+		le.PutUint16(amsg[46:48], uint16(l))
 		le.PutUint32(amsg[48:52], uint32(off))
-		off += len
+		off += l
 	}
 
 	if c.User != "" || c.Password != "" || c.Hash != nil {
@@ -263,7 +263,7 @@ func (c *Client) Authenticate(cmsg []byte) (amsg []byte, err error) {
 
 		keyExchangeKey := sessionBaseKey // if ntlm version == 2
 
-		if flags&NTLMSSP_NEGOTIATE_KEY_EXCH != 0 {
+		if flags&NtlmsspNegotiateKeyExch != 0 {
 			session.exportedSessionKey = make([]byte, 16)
 			_, err := rand.Read(session.exportedSessionKey)
 			if err != nil {

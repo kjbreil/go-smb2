@@ -75,7 +75,7 @@ func (c *HashContext) Size() int {
 }
 
 func (c *HashContext) Encode(p []byte) {
-	le.PutUint16(p[:2], SMB2_PREAUTH_INTEGRITY_CAPABILITIES)                // ContextType
+	le.PutUint16(p[:2], Smb2PreauthIntegrityCapabilities)                   // ContextType
 	le.PutUint16(p[2:4], uint16(4+len(c.HashAlgorithms)*2+len(c.HashSalt))) // DataLength
 
 	{
@@ -108,8 +108,8 @@ func (c *CipherContext) Size() int {
 }
 
 func (c *CipherContext) Encode(p []byte) {
-	le.PutUint16(p[:2], SMB2_ENCRYPTION_CAPABILITIES) // ContextType
-	le.PutUint16(p[2:4], uint16(2+len(c.Ciphers)*2))  // DataLength
+	le.PutUint16(p[:2], Smb2EncryptionCapabilities)  // ContextType
+	le.PutUint16(p[2:4], uint16(2+len(c.Ciphers)*2)) // DataLength
 
 	{
 		d := NegotiateContextDecoder(p).Data()
@@ -192,8 +192,8 @@ func (h HashContextDataDecoder) HashAlgorithms() []uint16 {
 
 func (h HashContextDataDecoder) Salt() []byte {
 	off := 4 + h.HashAlgorithmCount()*2
-	len := h.SaltLength()
-	return h[off : off+len]
+	length := h.SaltLength()
+	return h[off : off+length]
 }
 
 type CipherContextDataDecoder []byte

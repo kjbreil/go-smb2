@@ -226,12 +226,12 @@ func (p PacketCodec) SetChannelSequence(u uint16) {
 
 type TransformCodec []byte
 
-func (p TransformCodec) IsInvalid() bool {
-	if len(p) < 52 {
+func (t TransformCodec) IsInvalid() bool {
+	if len(t) < 52 {
 		return true
 	}
 
-	magic := p.ProtocolId()
+	magic := t.ProtocolId()
 	if magic[0] != 0xfd {
 		return true
 	}
@@ -248,60 +248,60 @@ func (p TransformCodec) IsInvalid() bool {
 	return false
 }
 
-func (p TransformCodec) ProtocolId() []byte {
-	return p[:4]
+func (t TransformCodec) ProtocolId() []byte {
+	return t[:4]
 }
 
-func (p TransformCodec) SetProtocolId() {
-	copy(p[:4], MAGIC2)
+func (t TransformCodec) SetProtocolId() {
+	copy(t[:4], MAGIC2)
 }
 
-func (p TransformCodec) Signature() []byte {
-	return p[4:20]
+func (t TransformCodec) Signature() []byte {
+	return t[4:20]
 }
 
-func (p TransformCodec) SetSignature(bs []byte) {
-	copy(p[4:20], bs)
+func (t TransformCodec) SetSignature(bs []byte) {
+	copy(t[4:20], bs)
 }
 
-func (p TransformCodec) Nonce() []byte {
-	return p[20:36]
+func (t TransformCodec) Nonce() []byte {
+	return t[20:36]
 }
 
-func (p TransformCodec) SetNonce(bs []byte) {
-	copy(p[20:36], bs)
+func (t TransformCodec) SetNonce(bs []byte) {
+	copy(t[20:36], bs)
 }
 
-func (p TransformCodec) OriginalMessageSize() uint32 {
-	return le.Uint32(p[36:40])
+func (t TransformCodec) OriginalMessageSize() uint32 {
+	return le.Uint32(t[36:40])
 }
 
-func (p TransformCodec) SetOriginalMessageSize(u uint32) {
-	le.PutUint32(p[36:40], u)
+func (t TransformCodec) SetOriginalMessageSize(u uint32) {
+	le.PutUint32(t[36:40], u)
 }
 
-func (p TransformCodec) EncryptionAlgorithm() uint16 {
-	return le.Uint16(p[42:44])
+func (t TransformCodec) EncryptionAlgorithm() uint16 {
+	return le.Uint16(t[42:44])
 }
 
-func (p TransformCodec) SetEncryptionAlgorithm(u uint16) {
-	le.PutUint16(p[42:44], u)
+func (t TransformCodec) SetEncryptionAlgorithm(u uint16) {
+	le.PutUint16(t[42:44], u)
 }
 
-func (p TransformCodec) SessionId() uint64 {
-	return le.Uint64(p[44:52])
+func (t TransformCodec) SessionId() uint64 {
+	return le.Uint64(t[44:52])
 }
 
-func (p TransformCodec) SetSessionId(u uint64) {
-	le.PutUint64(p[44:52], u)
+func (t TransformCodec) SetSessionId(u uint64) {
+	le.PutUint64(t[44:52], u)
 }
 
-func (p TransformCodec) AssociatedData() []byte {
-	return p[20:52]
+func (t TransformCodec) AssociatedData() []byte {
+	return t[20:52]
 }
 
-func (p TransformCodec) EncryptedData() []byte {
-	return p[52:]
+func (t TransformCodec) EncryptedData() []byte {
+	return t[52:]
 }
 
 // From SMB311

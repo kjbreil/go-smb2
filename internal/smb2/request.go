@@ -1,6 +1,6 @@
 package smb2
 
-import "github.com/hirochachacha/go-smb2/internal/utf16le"
+import "github.com/kjbreil/go-smb2/internal/utf16le"
 
 // ----------------------------------------------------------------------------
 // SMB2 NEGOTIATE Request Packet
@@ -34,7 +34,7 @@ func (c *NegotiateRequest) Size() int {
 }
 
 func (c *NegotiateRequest) Encode(pkt []byte) {
-	c.Command = SMB2_NEGOTIATE
+	c.Command = Smb2Negotiate
 	c.encodeHeader(pkt)
 
 	req := pkt[64:]
@@ -170,7 +170,7 @@ func (c *SessionSetupRequest) Size() int {
 }
 
 func (c *SessionSetupRequest) Encode(pkt []byte) {
-	c.Command = SMB2_SESSION_SETUP
+	c.Command = Smb2SessionSetup
 	c.encodeHeader(pkt)
 
 	req := pkt[64:]
@@ -266,7 +266,7 @@ func (c *LogoffRequest) Size() int {
 }
 
 func (c *LogoffRequest) Encode(pkt []byte) {
-	c.Command = SMB2_LOGOFF
+	c.Command = Smb2Logoff
 	c.encodeHeader(pkt)
 
 	req := pkt[64:]
@@ -315,7 +315,7 @@ func (c *TreeConnectRequest) Size() int {
 }
 
 func (c *TreeConnectRequest) Encode(pkt []byte) {
-	c.Command = SMB2_TREE_CONNECT
+	c.Command = Smb2TreeConnect
 	c.encodeHeader(pkt)
 
 	req := pkt[64:]
@@ -371,8 +371,8 @@ func (r TreeConnectRequestDecoder) Path() string {
 		return ""
 	}
 	off -= 64
-	len := r.PathLength()
-	return utf16le.DecodeToString(r[off : off+len])
+	length := r.PathLength()
+	return utf16le.DecodeToString(r[off : off+length])
 }
 
 // ----------------------------------------------------------------------------
@@ -392,7 +392,7 @@ func (c *TreeDisconnectRequest) Size() int {
 }
 
 func (c *TreeDisconnectRequest) Encode(pkt []byte) {
-	c.Command = SMB2_TREE_DISCONNECT
+	c.Command = Smb2TreeDisconnect
 	c.encodeHeader(pkt)
 
 	req := pkt[64:]
@@ -458,7 +458,7 @@ func (c *CreateRequest) Size() int {
 }
 
 func (c *CreateRequest) Encode(pkt []byte) {
-	c.Command = SMB2_CREATE
+	c.Command = Smb2Create
 	c.encodeHeader(pkt)
 
 	req := pkt[64:]
@@ -615,7 +615,7 @@ func (c *CloseRequest) Size() int {
 }
 
 func (c *CloseRequest) Encode(pkt []byte) {
-	c.Command = SMB2_CLOSE
+	c.Command = Smb2Close
 	c.encodeHeader(pkt)
 
 	req := pkt[64:]
@@ -669,7 +669,7 @@ func (c *FlushRequest) Size() int {
 }
 
 func (c *FlushRequest) Encode(pkt []byte) {
-	c.Command = SMB2_FLUSH
+	c.Command = Smb2Flush
 	c.encodeHeader(pkt)
 
 	req := pkt[64:]
@@ -734,7 +734,7 @@ func (c *ReadRequest) Size() int {
 }
 
 func (c *ReadRequest) Encode(pkt []byte) {
-	c.Command = SMB2_READ
+	c.Command = Smb2Read
 	c.encodeHeader(pkt)
 
 	req := pkt[64:]
@@ -862,7 +862,7 @@ func (c *WriteRequest) Size() int {
 }
 
 func (c *WriteRequest) Encode(pkt []byte) {
-	c.Command = SMB2_WRITE
+	c.Command = Smb2Write
 	c.encodeHeader(pkt)
 
 	req := pkt[64:]
@@ -985,7 +985,7 @@ func (c *CancelRequest) Size() int {
 }
 
 func (c *CancelRequest) Encode(pkt []byte) {
-	c.Command = SMB2_CANCEL
+	c.Command = Smb2Cancel
 	c.encodeHeader(pkt)
 
 	req := pkt[64:]
@@ -1040,7 +1040,7 @@ func (c *IoctlRequest) Size() int {
 }
 
 func (c *IoctlRequest) Encode(pkt []byte) {
-	c.Command = SMB2_IOCTL
+	c.Command = Smb2Ioctl
 	c.encodeHeader(pkt)
 
 	req := pkt[64:]
@@ -1150,7 +1150,7 @@ func (c *QueryDirectoryRequest) Size() int {
 }
 
 func (c *QueryDirectoryRequest) Encode(pkt []byte) {
-	c.Command = SMB2_QUERY_DIRECTORY
+	c.Command = Smb2QueryDirectory
 	c.encodeHeader(pkt)
 
 	req := pkt[64:]
@@ -1253,7 +1253,7 @@ func (c *QueryInfoRequest) Size() int {
 }
 
 func (c *QueryInfoRequest) Encode(pkt []byte) {
-	c.Command = SMB2_QUERY_INFO
+	c.Command = Smb2QueryInfo
 	c.encodeHeader(pkt)
 
 	req := pkt[64:]
@@ -1357,7 +1357,7 @@ func (c *SetInfoRequest) Size() int {
 }
 
 func (c *SetInfoRequest) Encode(pkt []byte) {
-	c.Command = SMB2_SET_INFO
+	c.Command = Smb2SetInfo
 	c.encodeHeader(pkt)
 
 	req := pkt[64:]
